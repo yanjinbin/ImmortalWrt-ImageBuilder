@@ -92,15 +92,15 @@ on:
           - "192.168.31.1"
           - "10.0.0.1"
       mihomo_version:
-        description: "mihomo 版本 (默认 1.19.29; 选 custom 时填写下方自定义版本)"
+        description: "mihomo 版本 (默认 1.19.27, 可选 latest 最新版; 选 custom 时填写下方自定义版本)"
         required: true
         type: choice
-        default: "1.19.29"
+        default: "1.19.27"
         options:
+          - "1.19.27"
+          - "latest"
           - "1.19.29"
           - "1.19.28"
-          - "latest"
-          - "1.19.27"
           - "1.19.24"
           - "custom"
       mihomo_custom_version:
