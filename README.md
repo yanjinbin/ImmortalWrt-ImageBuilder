@@ -37,6 +37,7 @@
 - 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，每次构建自动用 SDK 打包最新 main 分支，含魔改内容）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 主题：luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`）、luci-theme-openwrt（官方仓库）
 - 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库）
+- 温度监控：collectd-mod-sensors（collectd sensors 插件，区分 CPU/GPU 温度，自动带 lm-sensors）
 - 流量监控：luci-app-bandix（timsaya，wukongdaily/apk 源）
 - 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）
 
