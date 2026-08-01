@@ -1,0 +1,207 @@
+{#
+ The LOGIN page.
+
+ Copyright 2008 Steven Barth <steven@midlink.org>
+ Copyright 2008-2012 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+
+ It exists to pass `blank_page: true`, the only thing it changes about the generic template:
+ without a theme-local sysauth the dispatcher falls back to that one, which includes the header
+ WITHOUT blank_page — so the whole chrome (sidebar, menu, footer) rendered around the login
+ form, every control on it dead.
+
+ It is NOT a copy of bootstrap's sysauth.ut, which hides the form in a `<section hidden>` and
+ needs a view module to reveal it: tried here once and it gave a BLANK PAGE WITH NO WAY TO LOG
+ IN — the view bootstraps before a session exists, its RPCs answer "Access denied", the promise
+ rejects and render() never runs. Do not re-introduce it. The SERVER renders the form: works
+ with JS off, cannot be broken by a rejected promise, needs no luci-theme-bootstrap installed.
+
+ styles/pages/10-login.css makes it the centred card, keyed off `.fs-login` below. The strings
+ carry no msgctxt on purpose — luci-base translates them in the ~40 languages this theme has no
+ catalogue for.
+-#}
+
+{% include('header', { blank_page: true }) %}
+
+{# The class is what 10-login.css hooks: the form used to be found by
+   `form:has(> .cbi-map input[name="luci_username"])` — 49 characters written 17 times, ~0.8 KB —
+   because the markup was assumed to be stock LuCI's. It is OURS: name the form instead. #}
+<form method="post" class="fs-login">
+	{% if (fuser): %}
+		<div class="alert-message warning">
+			<p>{{ _('Invalid username and/or password! Please try again.') }}</p>
+		</div>
+	{% endif %}
+
+	<div class="cbi-map">
+		<h2 name="content">{{ _('Authorization Required') }}</h2>
+		<div class="cbi-map-descr">
+			{{ _('Please enter your username and password.') }}
+		</div>
+		<div class="cbi-section"><div class="cbi-section-node">
+			<div class="cbi-value">
+				<label class="cbi-value-title" for="luci_username">{{ _('Username') }}</label>
+				<div class="cbi-value-field">
+					<input class="cbi-input-text" type="text" name="luci_username" id="luci_username" autocomplete="username" value="{{ entityencode(duser, true) }}" />
+				</div>
+			</div>
+			<div class="cbi-value cbi-value-last">
+				<label class="cbi-value-title" for="luci_password">{{ _('Password') }}</label>
+				<div class="cbi-value-field">
+					<input class="cbi-input-text" type="password" name="luci_password" id="luci_password" autocomplete="current-password" />
+				</div>
+			</div>
+		</div></div>
+	</div>
+
+	<div class="cbi-page-actions">
+		<input type="submit" value="{{ _('Log in') }}" class="btn cbi-button cbi-button-apply" />
+	</div>
+</form>
+
+{%
+	let https_ports = uci.get('uhttpd', 'main', 'listen_https') ?? [];
+
+	https_ports = uniq(filter(
+		map(
+			(type(https_ports) == 'string') ? split(https_ports, /\s+/) : https_ports,
+			e => +match(e, /\d+$/)?.[0]
+		),
+		p => (p >= 0 && p <= 65535)
+	));
+%}
+
+{# The two server values the script below needs, handed over as DATA. It is the one shape the
+   linter cannot read — a `{{ … }}` block is not JS until the server renders it — so it carries no
+   logic at all, and eslint's .ut processor enforces exactly that (tools/lib/ut-scripts.mjs). The
+   script itself is then plain JS and gets linted like every other file in the theme. #}
+<script>window.__fsHttps={ports:{{ https_ports }},resource:"{{ resource }}"};</script>
+<script>
+	(() => {
+		const input = document.getElementsByName('luci_password')[0];
+
+		if (input)
+			input.focus();
+
+		/* If the router also serves HTTPS, hop over to it — the password is about to go over this
+		 * connection. The <img> probe is upstream's trick: it proves the TLS port actually answers
+		 * before we send the user there. */
+		if (document.location.protocol === 'https:') return;
+
+		const { hostname, pathname } = window.location;
+
+		(window.__fsHttps.ports || []).forEach((port) => {
+			const url = `https://${hostname}:${port}${pathname}`;
+			const img = new Image();
+
+			img.onload = () => { window.location = url; };
+			img.src = `https://${hostname}:${port}${window.__fsHttps.resource}/icons/loading.svg?${Math.random()}`;
+
+			setTimeout(() => { img.src = ''; }, 5000);
+		});
+	})();
+</script>
+
+{%
+	let cookie_days = +(uci.get('luci', 'sauth', 'cookie_days') ?? 365);
+%}
+
+<script>
+(function() {
+	'use strict';
+	var STORAGE_KEY = 'luci_remember_login_v1',
+	    MAX_AGE_DAYS = {{ cookie_days }},
+	    autoLogging = false;
+
+	function remember_save(user, pass) {
+		if (autoLogging)
+			return;
+
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify({
+				u: user,
+				p: pass,
+				e: Date.now() + MAX_AGE_DAYS * 86400000
+			}));
+		}
+		catch (e) {}
+	}
+
+	function remember_load() {
+		try {
+			var raw = localStorage.getItem(STORAGE_KEY);
+
+			if (!raw)
+				return null;
+
+			var cred = JSON.parse(raw);
+
+			if (!cred || !cred.u || !cred.p || cred.e < Date.now()) {
+				localStorage.removeItem(STORAGE_KEY);
+				return null;
+			}
+
+			return cred;
+		}
+		catch (e) {
+			return null;
+		}
+	}
+
+	function remember_clear() {
+		try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+	}
+
+	function remember_autofill(form) {
+		var cred = remember_load();
+
+		if (!cred || window.lr_tried)
+			return;
+
+		var user = form.querySelector('[name="luci_username"]'),
+		    pass = form.querySelector('[name="luci_password"]');
+
+		if (!user || !pass)
+			return;
+
+		autoLogging = true;
+		user.value = cred.u;
+		pass.value = cred.p;
+		form.submit();
+	}
+
+	{% if (fuser): %}
+		/* 密码错误: 清除记住的凭据并锁死本会话, 防止死循环 */
+		remember_clear();
+		window.lr_tried = true;
+	{% endif %}
+
+	var form = document.querySelector('form[method="post"]');
+
+	if (form) {
+		form.addEventListener('submit', function(ev) {
+			var user = form.querySelector('[name="luci_username"]'),
+			    pass = form.querySelector('[name="luci_password"]');
+
+			if (user && pass && user.value && pass.value)
+				remember_save(user.value, pass.value);
+		});
+
+		remember_autofill(form);
+	}
+
+	var luci_submit = HTMLFormElement.prototype.submit;
+
+	HTMLFormElement.prototype.submit = function() {
+		var user = this.querySelector('[name="luci_username"]'),
+		    pass = this.querySelector('[name="luci_password"]');
+
+		if (user && pass && user.value && pass.value)
+			remember_save(user.value, pass.value);
+
+		return luci_submit.apply(this, arguments);
+	};
+})();
+</script>
+
+{% include('footer', { blank_page: true }) %}

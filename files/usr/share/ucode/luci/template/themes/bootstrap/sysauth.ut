@@ -1,0 +1,150 @@
+{#
+ Copyright 2022 Jo-Philipp Wich <jo@mein.io>
+ Licensed to the public under the Apache License 2.0.
+-#}
+
+{% include('header', { blank_page: true }) %}
+
+<section hidden>
+	<form method="post" class="cbi-map">
+		<div class="cbi-section">
+			<div class="cbi-section-node">
+				<div class="cbi-value">
+					<label class="cbi-value-title" for="luci_username">{{ _('Username') }}</label>
+					<div class="cbi-value-field">
+						<input name="luci_username" id="luci_username" type="text" autocomplete="username" value="{{ entityencode(duser, true) }}">
+					</div>
+				</div>
+				<div class="cbi-value">
+					<label class="cbi-value-title" for="luci_password">{{ _('Password') }}</label>
+					<div class="cbi-value-field">
+						<input name="luci_password" id="luci_password" type="password" autocomplete="current-password">
+					</div>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	<hr>
+
+	{% if (fuser): %}
+	<div class="alert-message error">
+		{{ _('Invalid username and/or password! Please try again.') }}
+	</div>
+	{% endif %}
+
+	<button class="btn cbi-button-positive important">{{ _('Log in') }}</button>
+</section>
+
+<div id="view">
+	<div class="spinning">{{ _('Loading view…') }}</div>
+	<script>
+		L.require('ui').then(function(ui) {
+			ui.instantiateView('bootstrap.sysauth');
+		});
+	</script>
+</div>
+
+{%
+	let cookie_days = +(uci.get('luci', 'sauth', 'cookie_days') ?? 365);
+%}
+
+<script>
+(function() {
+	'use strict';
+	var STORAGE_KEY = 'luci_remember_login_v1',
+	    MAX_AGE_DAYS = {{ cookie_days }},
+	    autoLogging = false;
+
+	function remember_save(user, pass) {
+		if (autoLogging)
+			return;
+
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify({
+				u: user,
+				p: pass,
+				e: Date.now() + MAX_AGE_DAYS * 86400000
+			}));
+		}
+		catch (e) {}
+	}
+
+	function remember_load() {
+		try {
+			var raw = localStorage.getItem(STORAGE_KEY);
+
+			if (!raw)
+				return null;
+
+			var cred = JSON.parse(raw);
+
+			if (!cred || !cred.u || !cred.p || cred.e < Date.now()) {
+				localStorage.removeItem(STORAGE_KEY);
+				return null;
+			}
+
+			return cred;
+		}
+		catch (e) {
+			return null;
+		}
+	}
+
+	function remember_clear() {
+		try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+	}
+
+	function remember_autofill(form) {
+		var cred = remember_load();
+
+		if (!cred || window.lr_tried)
+			return;
+
+		var user = form.querySelector('[name="luci_username"]'),
+		    pass = form.querySelector('[name="luci_password"]');
+
+		if (!user || !pass)
+			return;
+
+		autoLogging = true;
+		user.value = cred.u;
+		pass.value = cred.p;
+		form.submit();
+	}
+
+	{% if (fuser): %}
+		/* 密码错误: 清除记住的凭据并锁死本会话, 防止死循环 */
+		remember_clear();
+		window.lr_tried = true;
+	{% endif %}
+
+	var form = document.querySelector('form[method="post"]');
+
+	if (form) {
+		form.addEventListener('submit', function(ev) {
+			var user = form.querySelector('[name="luci_username"]'),
+			    pass = form.querySelector('[name="luci_password"]');
+
+			if (user && pass && user.value && pass.value)
+				remember_save(user.value, pass.value);
+		});
+
+		remember_autofill(form);
+	}
+
+	var luci_submit = HTMLFormElement.prototype.submit;
+
+	HTMLFormElement.prototype.submit = function() {
+		var user = this.querySelector('[name="luci_username"]'),
+		    pass = this.querySelector('[name="luci_password"]');
+
+		if (user && pass && user.value && pass.value)
+			remember_save(user.value, pass.value);
+
+		return luci_submit.apply(this, arguments);
+	};
+})();
+</script>
+
+{% include('footer', { blank_page: true }) %}
