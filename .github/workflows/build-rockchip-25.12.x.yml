@@ -394,7 +394,11 @@ jobs:
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
             echo "- Store 商店: ${{ inputs.enable_store }}"
-            echo "- PPPoE: ${{ inputs.enable_pppoe }}"
+            if [ "${{ inputs.enable_pppoe }}" = "yes" ]; then
+              echo "- PPPoE: 已启用 (拨号密码: ${{ inputs.pppoe_password }})"
+            else
+              echo "- PPPoE: 未启用"
+            fi
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
             echo ""
             echo "## 🧩 已集成插件/主题"
