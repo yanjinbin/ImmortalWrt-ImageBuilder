@@ -356,32 +356,66 @@ jobs:
           immortalwrt/imagebuilder:rockchip-armv8-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
         
     
-      - name: Create info
+      - name: 生成动态 Release 说明
         run: |
-          cat > ${{ github.workspace }}/router-info.md <<EOF
-          ## 📡 路由器后台信息
+          set -euo pipefail
 
-          - ✳️ **软路由型号**: ${{ github.event.inputs.profile }}
-          - 🏠 **后台地址**: ${{ github.event.inputs.custom_router_ip }}
-          - 👤 **用户名**: root
-          - 🔑 **密码**: 无
-          EOF
+          PROFILE="${{ github.event.inputs.profile }}"
+          case "$PROFILE" in
+            friendlyarm_nanopi-r5c) DEV="FriendlyARM NanoPi R5C" ;;
+            friendlyarm_nanopi-r5s) DEV="FriendlyARM NanoPi R5S" ;;
+            friendlyarm_nanopi-r6c) DEV="FriendlyARM NanoPi R6C" ;;
+            friendlyarm_nanopi-r6s) DEV="FriendlyARM NanoPi R6S" ;;
+            friendlyarm_nanopi-r2s) DEV="FriendlyARM NanoPi R2S" ;;
+            friendlyarm_nanopi-r2c) DEV="FriendlyARM NanoPi R2C" ;;
+            friendlyarm_nanopi-r4s) DEV="FriendlyARM NanoPi R4S" ;;
+            radxa_e20c) DEV="Radxa E20C" ;;
+            *) DEV="$PROFILE" ;;
+          esac
+          echo "DEV_NAME=$DEV" >> "$GITHUB_ENV"
 
-          if [ "${{ github.event.inputs.include_docker }}" == "yes" ]; then
-            extra_content="#### 默认带docker"
-            echo -e "\n$extra_content" >> ${{ github.workspace }}/router-info.md
-          else
-            echo -e "\n#### 不带docker" >> ${{ github.workspace }}/router-info.md
-          fi
+          MIHOMO_VER="${{ inputs.mihomo_version }}"
+          [ "$MIHOMO_VER" = "custom" ] && MIHOMO_VER="${{ inputs.mihomo_custom_version }}"
+          MIHOMO_PLAT="${{ inputs.mihomo_platform }}"
+          [ "$MIHOMO_PLAT" = "custom" ] && MIHOMO_PLAT="${{ inputs.mihomo_custom_platform }}"
 
-          echo -e "\n#### 已集成插件/主题\n- nikki (代理) + luci-app-nikki\n- luci-theme-uniwrt / luci-theme-footstrap / luci-theme-openwrt\n- luci-app-statistics (流量统计)\n- luci-app-bandix / luci-app-partexp" >> ${{ github.workspace }}/router-info.md
+          BODY="${{ github.workspace }}/release-body.md"
+          {
+            echo "# 🛠️ ImmortalWrt Rockchip 固件"
+            echo ""
+            echo "**构建仓库**: yanjinbin/ImmortalWrt-ImageBuilder"
+            echo "**仓库提交**: ${{ github.sha }} (${{ github.ref_name }})"
+            echo "**构建时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "## ⚙️ 本次构建参数"
+            echo "- ImmortalWrt 版本: ${{ inputs.luci_version }}"
+            echo "- 设备: $DEV ($PROFILE)"
+            echo "- LAN 管理地址: ${{ inputs.custom_router_ip }}"
+            echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
+            echo "- Docker: ${{ inputs.include_docker }}"
+            echo "- Store 商店: ${{ inputs.enable_store }}"
+            echo "- PPPoE: ${{ inputs.enable_pppoe }}"
+            echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
+            echo ""
+            echo "## 🧩 已集成插件/主题"
+            echo "- 代理: nikki + luci-app-nikki (fork 魔改: 批量上传/重载清连接) + mihomo (MetaCubeX 预编译)"
+            echo "- 主题: luci-theme-uniwrt / luci-theme-footstrap / luci-theme-openwrt"
+            echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
+            echo "- 监控/扩容: luci-app-bandix / luci-app-partexp"
+            echo ""
+            echo "## 📦 固件文件"
+            ls -lh "${{ github.workspace }}/bin/targets/rockchip/armv8/"*.img.gz 2>/dev/null \
+              | awk '{print "- \`"$9"\` ("$5")"}'
+          } > "$BODY"
+          echo "已生成 Release 说明:"
+          cat "$BODY"
 
-      - name: Upload ImmortWrt as release assets
+      - name: 发布固件到独立 Release (每次构建单独页面)
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: Autobuild
-          name: ImmortWrt-Rockchip
-          body_path: ${{ github.workspace }}/router-info.md
+          tag_name: Autobuild-${{ github.run_id }}-${{ github.run_attempt }}
+          name: "ImmortalWrt Rockchip ${{ env.DEV_NAME }} (${{ inputs.luci_version }})"
+          body_path: ${{ github.workspace }}/release-body.md
           files: |
             ${{ github.workspace }}/bin/targets/rockchip/armv8/*.img.gz
           token: ${{ secrets.GITHUB_TOKEN }}

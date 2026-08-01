@@ -44,7 +44,7 @@
 
 **mihomo 版本/平台**：工作流 UI 支持选择或填写 mihomo 版本（默认 `1.19.27`，可选 `latest` 最新版或自定义版本号）和平台（默认 `arm64`，覆盖 R5C / R6S / E20C；可选 `amd64`、`armv7` 等或自定义）。
 
-构建完成后固件自动上传到 Release（tag：`Autobuild`），可直接下载 `*.img.gz`。
+构建完成后固件自动发布到**独立 Release 页面**（每次构建单独 tag：`Autobuild-<run>`），说明内容按本次构建参数（设备 / LAN IP / mihomo 版本 / 固件空间等）动态生成，可直接下载 `*.img.gz`。
 
 ## [基本用法步骤](https://github.com/wukongdaily/AutoBuildImmortalWrt/wiki) 👈🏻
 1、fork本项目<br>
