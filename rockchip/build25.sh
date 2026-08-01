@@ -49,7 +49,9 @@ rm -f /home/build/immortalwrt/packages/nikki-*.apk \
 # 导入 GitHub Actions 中用 SDK 编译好的 fork 插件 (来自 build-fork-packages job)
 if [ -d /home/build/immortalwrt/fork-packages ]; then
     echo "✅ 正在导入 fork 自编译插件..."
-    cp -v /home/build/immortalwrt/fork-packages/*.apk /home/build/immortalwrt/packages/ || echo "⚠️ 未找到 fork 编译产物"
+    # upload-artifact 会保留 bin/packages/... 嵌套路径, 递归查找所有 apk 再拷贝
+    find /home/build/immortalwrt/fork-packages -type f -name '*.apk' \
+      -exec cp -v {} /home/build/immortalwrt/packages/ \; || echo "⚠️ 未找到 fork 编译产物"
     ls -lah /home/build/immortalwrt/packages/
 else
     echo "⚠️ 未挂载 fork-packages 目录, 跳过 fork 插件导入"
