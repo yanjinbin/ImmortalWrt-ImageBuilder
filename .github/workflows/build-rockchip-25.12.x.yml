@@ -135,11 +135,6 @@ on:
           - '2G'
           - '3G'
           - '4G'
-      enable_store:
-        description: "集成 store 商店"
-        required: false
-        type: boolean
-        default: false
       include_docker:
         description: |
           是否编译 Docker 插件
@@ -239,15 +234,6 @@ jobs:
               echo "Error: PPPoE account and password must be provided when PPPoE is enabled!"
               exit 1
             fi
-          fi
-
-      - name: Enable Store integration
-        run: |
-          if [ "${{ github.event.inputs.enable_store }}" == "true" ]; then
-            echo 'CUSTOM_PACKAGES="$CUSTOM_PACKAGES luci-app-store"' >> shell/apk-custom-packages.sh
-            echo "✅ 已追加 luci-app-store"
-          else
-            echo "❎ 未启用 luci-app-store"
           fi
 
       - name: Download fork 自编译插件
@@ -395,7 +381,6 @@ jobs:
             echo "- 登录密码: 无"
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
-            echo "- Store 商店: ${{ inputs.enable_store }}"
             if [ "${{ inputs.enable_pppoe }}" = "yes" ]; then
               echo "- PPPoE: 已启用 (拨号密码: ${{ inputs.pppoe_password }})"
             else
