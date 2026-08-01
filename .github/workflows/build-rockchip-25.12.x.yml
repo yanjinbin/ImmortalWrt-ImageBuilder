@@ -259,8 +259,17 @@ jobs:
       - name: 下载 yanjinbin/OpenWrt-nikki 预编译包 (不编译)
         run: |
           set -euo pipefail
-          curl -fL --retry 3 -o /tmp/nikki-prebuilt.tar.gz \
-            "https://github.com/yanjinbin/OpenWrt-nikki/releases/latest/download/nikki-aarch64_generic-openwrt-25.12.tar.gz"
+          URL="https://github.com/yanjinbin/OpenWrt-nikki/releases/latest/download/nikki-aarch64_generic-openwrt-25.12.tar.gz"
+          # fork 预编译工作流可能尚未发布, 等待重试
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fL --retry 3 -o /tmp/nikki-prebuilt.tar.gz "$URL"; then
+              echo "✅ 第 $attempt 次下载成功"
+              break
+            fi
+            echo "⚠️ 第 $attempt 次下载失败, 30 秒后重试..."
+            sleep 30
+          done
+          [ -s /tmp/nikki-prebuilt.tar.gz ] || { echo "错误: nikki 预编译包下载失败"; exit 1; }
           mkdir -p /tmp/nikki-prebuilt
           tar -xzf /tmp/nikki-prebuilt.tar.gz -C /tmp/nikki-prebuilt
           mkdir -p "${{ github.workspace }}/fork-packages"
