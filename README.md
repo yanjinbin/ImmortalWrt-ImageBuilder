@@ -41,7 +41,7 @@
 - 流量监控：luci-app-bandix（timsaya，wukongdaily/apk 源）
 - 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）
 
-**默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.100.1`，可选 `192.168.1.1` 等），仅对多网口机型生效。
+**默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.1.1`，可选 `192.168.100.1` 等），仅对多网口机型生效。
 
 **mihomo 版本/平台**：工作流 UI 支持选择或填写 mihomo 版本（默认 `1.19.27`，可选 `latest` 最新版或自定义版本号）和平台（默认 `arm64`，覆盖 R5C / R6S / E20C；可选 `amd64`、`armv7` 等或自定义）。
 
