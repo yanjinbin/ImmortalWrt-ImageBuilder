@@ -34,7 +34,7 @@
 **默认支持机型**：FriendlyARM NanoPi R5C、Radxa E20C（工作流 `Build 25.12.x Rockchip` 中可选，默认 R5C）。
 
 **已集成插件/主题**：
-- 代理：nikki + luci-app-nikki + mihomo-meta（来源：`yanjinbin/OpenWrt-nikki` fork，每次构建自动用 SDK 打包最新 main 分支，含魔改内容；mihomo 不自行编译，直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 拉取预编译二进制）
+- 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，每次构建自动用 SDK 打包最新 main 分支，含魔改内容）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 主题：luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`）、luci-theme-openwrt（官方仓库）
 - 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库）
 - 流量监控：luci-app-bandix（timsaya，wukongdaily/apk 源）

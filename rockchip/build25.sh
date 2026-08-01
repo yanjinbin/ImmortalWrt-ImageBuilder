@@ -83,8 +83,8 @@ PACKAGES="$PACKAGES luci-theme-uniwrt"
 PACKAGES="$PACKAGES luci-theme-footstrap"
 # ============= 流量统计 (imm 官方) =============
 PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
-# ============= nikki 代理 (fork 自编译) =============
-PACKAGES="$PACKAGES mihomo-meta nikki luci-app-nikki luci-i18n-nikki-zh-cn"
+# ============= nikki 代理 (fork 自编译; mihomo 由工作流直接下载 MetaCubeX 预编译二进制) =============
+PACKAGES="$PACKAGES nikki luci-app-nikki luci-i18n-nikki-zh-cn"
 # ======== shell/custom-packages.sh =======
 # 合并imm仓库以外的第三方插件
 PACKAGES="$PACKAGES $CUSTOM_PACKAGES"
