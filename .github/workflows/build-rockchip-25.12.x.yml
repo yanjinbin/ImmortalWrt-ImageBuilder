@@ -401,7 +401,7 @@ jobs:
             echo ""
             echo "## 📦 固件文件"
             ls -lh "${{ github.workspace }}/bin/targets/rockchip/armv8/"*.img.gz 2>/dev/null \
-              | awk '{print "- \`"$9"\` ("$5")"}'
+              | awk '{n=$9; sub(/.*\//,"",n); print "- \`"n"\` ("$5")"}'
           } > "$BODY"
           echo "已生成 Release 说明:"
           cat "$BODY"
