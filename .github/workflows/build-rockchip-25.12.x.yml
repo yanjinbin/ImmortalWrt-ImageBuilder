@@ -158,6 +158,10 @@ on:
       pppoe_password:
         description: "宽带密码 (若启用PPPoE)"
         required: false
+      remark:
+        description: "备注说明 (可选, 会写入本次 Release 说明)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -382,11 +386,16 @@ jobs:
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
             if [ "${{ inputs.enable_pppoe }}" = "yes" ]; then
-              echo "- PPPoE: 已启用 (拨号密码: ${{ inputs.pppoe_password }})"
+            echo "- PPPoE: 已启用 (拨号密码: ${{ inputs.pppoe_password }})"
             else
               echo "- PPPoE: 未启用"
             fi
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
+            if [ -n "${{ inputs.remark }}" ]; then
+              echo ""
+              echo "## 📝 备注"
+              echo "${{ inputs.remark }}"
+            fi
             echo ""
             echo "## 🧩 已集成插件/主题"
             echo "- 代理: nikki + luci-app-nikki (fork 魔改: 批量上传/重载清连接) + mihomo (MetaCubeX 预编译)"
