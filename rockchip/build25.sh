@@ -40,6 +40,21 @@ else
   ls -lah /home/build/immortalwrt/packages/
 fi
 
+# ============= fork 自编译插件 (nikki / uniwrt / footstrap) =============
+# 移除 wukongdaily/apk 仓库中的上游 nikki 包, 避免与下方 fork 编译产物冲突
+rm -f /home/build/immortalwrt/packages/nikki-*.apk \
+      /home/build/immortalwrt/packages/luci-app-nikki-*.apk \
+      /home/build/immortalwrt/packages/luci-i18n-nikki-*.apk
+
+# 导入 GitHub Actions 中用 SDK 编译好的 fork 插件 (来自 build-fork-packages job)
+if [ -d /home/build/immortalwrt/fork-packages ]; then
+    echo "✅ 正在导入 fork 自编译插件..."
+    cp -v /home/build/immortalwrt/fork-packages/*.apk /home/build/immortalwrt/packages/ || echo "⚠️ 未找到 fork 编译产物"
+    ls -lah /home/build/immortalwrt/packages/
+else
+    echo "⚠️ 未挂载 fork-packages 目录, 跳过 fork 插件导入"
+fi
+
 # 输出调试信息
 echo "$(date '+%Y-%m-%d %H:%M:%S') - 开始构建固件..."
 echo "查看repositories信息——————"
@@ -62,6 +77,14 @@ if [ "$INCLUDE_DOCKER" = "yes" ]; then
 fi
 # 文件管理器
 PACKAGES="$PACKAGES luci-i18n-filemanager-zh-cn"
+# ============= 主题 (fork 编译 + imm 官方) =============
+PACKAGES="$PACKAGES luci-theme-openwrt"
+PACKAGES="$PACKAGES luci-theme-uniwrt"
+PACKAGES="$PACKAGES luci-theme-footstrap"
+# ============= 流量统计 (imm 官方) =============
+PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
+# ============= nikki 代理 (fork 自编译) =============
+PACKAGES="$PACKAGES mihomo-meta nikki luci-app-nikki luci-i18n-nikki-zh-cn"
 # ======== shell/custom-packages.sh =======
 # 合并imm仓库以外的第三方插件
 PACKAGES="$PACKAGES $CUSTOM_PACKAGES"

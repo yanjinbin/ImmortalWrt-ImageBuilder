@@ -1,5 +1,4 @@
 name: Build 25.12.x Rockchip
-# 目前此工作流可以集成imm仓库内的软件 第三方软件暂不能集成(待开发)
 on:
   workflow_dispatch:
     inputs:
@@ -79,11 +78,19 @@ on:
           - xunlong_orangepi-r1-plus
           - xunlong_orangepi-r1-plus-lts
         required: true
-        default: 'friendlyarm_nanopi-r3s'
+        default: 'friendlyarm_nanopi-r5c'
       custom_router_ip:
-        description: "请设置软路由的管理地址(注意仅对多网口软路由有效) 格式:192.168.x.1 或 10.x.x.1"
+        description: "选择默认 LAN 口管理地址(仅对多网口软路由有效)"
         required: true
+        type: choice
         default: "192.168.100.1"
+        options:
+          - "192.168.100.1"
+          - "192.168.1.1"
+          - "192.168.2.1"
+          - "192.168.5.1"
+          - "192.168.31.1"
+          - "10.0.0.1"
       rootfs_partsize:
         description: '选择软件包空间大小'
         required: true
@@ -127,7 +134,56 @@ permissions:
   contents: write
 
 jobs:
+  # 用 OpenWrt 25.12 SDK (aarch64_generic) 编译本仓库 fork 魔改的插件:
+  #   yanjinbin/OpenWrt-nikki        -> nikki + luci-app-nikki + mihomo-meta
+  #   yanjinbin/uniwrt-luci          -> luci-theme-uniwrt
+  #   yanjinbin/luci-theme-footstrap -> luci-theme-footstrap
+  # 每次构建都拉取 fork 最新 main 分支, 保证魔改内容进入固件
+  build-fork-packages:
+    name: 编译 fork 插件 ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: nikki
+            repository: yanjinbin/OpenWrt-nikki
+            feed: nikki
+            packages: "mihomo-meta nikki luci-app-nikki"
+          - name: uniwrt-luci
+            repository: yanjinbin/uniwrt-luci
+            feed: uniwrt
+            packages: "luci-theme-uniwrt"
+          - name: luci-theme-footstrap
+            repository: yanjinbin/luci-theme-footstrap
+            feed: footstrap
+            packages: "luci-theme-footstrap"
+
+    steps:
+      - name: Checkout ${{ matrix.repository }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ matrix.repository }}
+
+      - name: 用 OpenWrt 25.12 SDK 编译 (aarch64_generic)
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: aarch64_generic-openwrt-25.12
+          FEEDNAME: ${{ matrix.feed }}
+          PACKAGES: ${{ matrix.packages }}
+          INDEX: 1
+          NO_REFRESH_CHECK: true
+          V: s
+
+      - name: 上传编译产物
+        uses: actions/upload-artifact@v7
+        with:
+          name: fork-${{ matrix.name }}
+          path: bin/packages/**/*.apk
+          if-no-files-found: error
+
   build:
+    needs: build-fork-packages
     runs-on: ubuntu-22.04
 
     steps:
@@ -135,7 +191,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set executable permissions
-        run: chmod +x ${{ github.workspace }}/rockchip/build24.sh
+        run: chmod +x ${{ github.workspace }}/rockchip/build25.sh
       
       - name: Save Custom Router IP into OpenWrt files
         run: |
@@ -161,10 +217,18 @@ jobs:
           else
             echo "❎ 未启用 luci-app-store"
           fi
+
+      - name: Download fork 自编译插件
+        uses: actions/download-artifact@v8
+        with:
+          pattern: fork-*
+          path: ${{ github.workspace }}/fork-packages
+          merge-multiple: true
+
       - name: Check Docker
         run: |
           if [[ "${{ inputs.include_docker }}" == "yes" ]]; then
-             echo 'CUSTOM_PACKAGES="$CUSTOM_PACKAGES docker"' >> shell/custom-packages.sh
+             echo 'CUSTOM_PACKAGES="$CUSTOM_PACKAGES docker"' >> shell/apk-custom-packages.sh
              echo "✅ 已为Rockchip平台补充 docker 组件"
           fi
       
@@ -199,6 +263,7 @@ jobs:
               -v "${{ github.workspace }}/arch/arch.conf:/home/build/immortalwrt/files/etc/opkg/arch.conf" \
               -v "${{ github.workspace }}/rockchip/imm25.config:/home/build/immortalwrt/.config" \
               -v "${{ github.workspace }}/shell:/home/build/immortalwrt/shell" \
+              -v "${{ github.workspace }}/fork-packages:/home/build/immortalwrt/fork-packages" \
               -v "${{ github.workspace }}/rockchip/build25.sh:/home/build/immortalwrt/build.sh" \
               -e PROFILE=$profile \
               -e INCLUDE_DOCKER=$include_docker \
@@ -226,6 +291,8 @@ jobs:
           else
             echo -e "\n#### 不带docker" >> ${{ github.workspace }}/router-info.md
           fi
+
+          echo -e "\n#### 已集成插件/主题\n- nikki (代理) + luci-app-nikki\n- luci-theme-uniwrt / luci-theme-footstrap / luci-theme-openwrt\n- luci-app-statistics (流量统计)\n- luci-app-bandix / luci-app-partexp" >> ${{ github.workspace }}/router-info.md
 
       - name: Upload ImmortWrt as release assets
         uses: softprops/action-gh-release@v3

@@ -27,6 +27,23 @@
 > 7、对于[插件追新的用户 建议前往run项目 下载run后 ](https://github.com/wukongdaily/RunFilesBuilder/discussions/41)用命令sh xx.run 覆盖安装 <br>
 > 8、支持24.10.x 、25.12.x 等版本 （包括x86-64-ISO、x86-64、rockchip、全志sunxi、无线路由器）
 
+## 🧩 本仓库定制内容
+
+> 当前只维护 **rockchip 25.12.x APK 安装方式**（24.10 及以下版本不做支持）。
+
+**默认支持机型**：FriendlyARM NanoPi R5C、Radxa E20C（工作流 `Build 25.12.x Rockchip` 中可选，默认 R5C）。
+
+**已集成插件/主题**：
+- 代理：nikki + luci-app-nikki + mihomo-meta（来源：`yanjinbin/OpenWrt-nikki` fork，每次构建自动用 SDK 编译最新 main 分支，含魔改内容）
+- 主题：luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`）、luci-theme-openwrt（官方仓库）
+- 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库）
+- 流量监控：luci-app-bandix（timsaya，wukongdaily/apk 源）
+- 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）
+
+**默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.100.1`，可选 `192.168.1.1` 等），仅对多网口机型生效。
+
+构建完成后固件自动上传到 Release（tag：`Autobuild`），可直接下载 `*.img.gz`。
+
 ## [基本用法步骤](https://github.com/wukongdaily/AutoBuildImmortalWrt/wiki) 👈🏻
 1、fork本项目<br>
 2、在fork后的项目中 点击【action】 找到需要的工作流后 run-workflow<br>

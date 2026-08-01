@@ -16,7 +16,11 @@
 | luci-theme-kucat      | 酷猫主题                  | [sirpdboy/luci-theme-kucat](https://github.com/sirpdboy/luci-theme-kucat)                 |
 | luci-app-mosdns                | 高性能 DNS 分流器，支持 DoH/DoQ 等         | [sbwml/luci-app-mosdns](https://github.com/sbwml/luci-app-mosdns)                     |
 | luci-app-nekobox               | 代理工具      | [Thaolga/luci-app-nekobox](https://github.com/Thaolga/openwrt-nekobox)       |
-| luci-app-nikki                 | 代理工具               | [nikkinikki-org/nikki](https://github.com/nikkinikki-org/OpenWrt-momo)                                                                     |
+| luci-app-nikki                 | 代理工具 (fork 自编译)   | [yanjinbin/OpenWrt-nikki](https://github.com/yanjinbin/OpenWrt-nikki) (含 mihomo-meta / nikki / luci-app-nikki) |
+| luci-theme-uniwrt              | UniWRT 主题 (fork 自编译) | [yanjinbin/uniwrt-luci](https://github.com/yanjinbin/uniwrt-luci)                                          |
+| luci-theme-footstrap           | Footstrap 主题 (fork 自编译) | [yanjinbin/luci-theme-footstrap](https://github.com/yanjinbin/luci-theme-footstrap)                     |
+| luci-theme-openwrt             | OpenWrt 官方主题 (imm 仓库内) | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
+| luci-app-statistics            | 流量统计 (imm 仓库内)    | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
 | luci-app-momo                 | 代理工具               | [nikkinikki-org/momo](https://github.com/nikkinikki-org/OpenWrt-momo)                                                                     |
 | luci-app-passwall2             | 代理工具           | [Openwrt-Passwall/openwrt-passwall2](https://github.com/Openwrt-Passwall/openwrt-passwall2)       |
 | luci-app-ssr-plus              | 代理工具                | [coolsnowwolf/luci-app-ssr-plus](https://github.com/fw876/helloworld) |
