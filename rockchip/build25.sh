@@ -85,8 +85,8 @@ PACKAGES="$PACKAGES luci-theme-uniwrt"
 PACKAGES="$PACKAGES luci-theme-footstrap"
 # ============= 流量统计 (imm 官方) =============
 PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
-# 温度监控: collectd sensors 插件, 区分 CPU/GPU 温度 (cpu-thermal / gpu-thermal), 自动带 lm-sensors 依赖
-PACKAGES="$PACKAGES collectd-mod-sensors"
+# collectd 常用统计模块: CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度 (lm-sensors 自动依赖)
+PACKAGES="$PACKAGES collectd-mod-cpu collectd-mod-memory collectd-mod-load collectd-mod-interface collectd-mod-df collectd-mod-sensors"
 # ============= nikki 代理 (fork 自编译; mihomo 由工作流直接下载 MetaCubeX 预编译二进制) =============
 PACKAGES="$PACKAGES nikki luci-app-nikki luci-i18n-nikki-zh-cn"
 # ======== shell/custom-packages.sh =======
