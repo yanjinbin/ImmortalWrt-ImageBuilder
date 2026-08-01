@@ -385,11 +385,7 @@ jobs:
             echo "- 登录密码: 无"
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
-            if [ "${{ inputs.enable_pppoe }}" = "yes" ]; then
-            echo "- PPPoE: 已启用 (拨号密码: ${{ inputs.pppoe_password }})"
-            else
-              echo "- PPPoE: 未启用"
-            fi
+            echo "- PPPoE: ${{ inputs.enable_pppoe }}"
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
             if [ -n "${{ inputs.remark }}" ]; then
               echo ""
