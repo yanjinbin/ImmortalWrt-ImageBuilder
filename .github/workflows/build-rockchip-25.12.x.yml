@@ -169,7 +169,8 @@ permissions:
 
 jobs:
   # 用 OpenWrt 25.12 SDK (aarch64_generic) 编译本仓库 fork 魔改的插件:
-  #   yanjinbin/OpenWrt-nikki        -> nikki + luci-app-nikki (mihomo 由主 job 直接下载 MetaCubeX 预编译二进制)
+  #   nikki 不再编译: 直接下载 yanjinbin/OpenWrt-nikki 的预编译 release 包
+  #   (mihomo 由主 job 直接下载 MetaCubeX 预编译二进制)
   #   yanjinbin/uniwrt-luci          -> luci-theme-uniwrt
   #   yanjinbin/luci-theme-footstrap -> luci-theme-footstrap
   # 每次构建都拉取 fork 最新 main 分支, 保证魔改内容进入固件
@@ -180,10 +181,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: nikki
-            repository: yanjinbin/OpenWrt-nikki
-            feed: nikki
-            packages: "nikki luci-app-nikki"
           - name: uniwrt-luci
             repository: yanjinbin/uniwrt-luci
             feed: uniwrt
@@ -258,6 +255,18 @@ jobs:
           pattern: fork-*
           path: ${{ github.workspace }}/fork-packages
           merge-multiple: true
+
+      - name: 下载 yanjinbin/OpenWrt-nikki 预编译包 (不编译)
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/nikki-prebuilt.tar.gz \
+            "https://github.com/yanjinbin/OpenWrt-nikki/releases/latest/download/nikki-aarch64_generic-openwrt-25.12.tar.gz"
+          mkdir -p /tmp/nikki-prebuilt
+          tar -xzf /tmp/nikki-prebuilt.tar.gz -C /tmp/nikki-prebuilt
+          mkdir -p "${{ github.workspace }}/fork-packages"
+          cp /tmp/nikki-prebuilt/*.apk "${{ github.workspace }}/fork-packages/"
+          echo "✅ 已导入 nikki 预编译包:"
+          ls -lah "${{ github.workspace }}/fork-packages/"
 
       - name: 下载 mihomo 预编译二进制 (MetaCubeX releases, 不自行编译)
         run: |
