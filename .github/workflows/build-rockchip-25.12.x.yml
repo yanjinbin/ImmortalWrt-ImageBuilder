@@ -199,7 +199,8 @@ jobs:
       - name: 用 OpenWrt 25.12 SDK 编译 (aarch64_generic)
         uses: openwrt/gh-action-sdk@main
         env:
-          ARCH: aarch64_generic-openwrt-25.12
+          # release 版 SDK 镜像自带工具链, 避免 snapshot 容器运行时下载 258MB
+          ARCH: aarch64_generic-25.12.4
           FEEDNAME: ${{ matrix.feed }}
           PACKAGES: ${{ matrix.packages }}
           INDEX: 1
