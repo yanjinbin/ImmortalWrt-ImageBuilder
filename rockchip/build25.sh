@@ -60,21 +60,26 @@ else
 fi
 
 # ============= 内置 geox 数据集 (geoip/geosite/mmdb, 给 nikki/mihomo 首次启动免下载) =============
+# 是否内置由 workflow 的 INCLUDE_GEOX 控制 (默认 yes);
 # mihomo 以 -d /etc/nikki/run 启动, 数据文件直接放在该目录;
 # 构建脚本内使用原生直连地址下载, 不加 ghproxy 等代理前缀
-NIKKI_RUN_DIR="/home/build/immortalwrt/files/etc/nikki/run"
-mkdir -p "$NIKKI_RUN_DIR"
-wget -q --timeout=60 -t 3 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat" -O "$NIKKI_RUN_DIR/geoip.dat"
-wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "$NIKKI_RUN_DIR/geosite.dat"
-wget -q --timeout=60 -t 3 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb" -O "$NIKKI_RUN_DIR/country.mmdb"
-for f in geoip.dat geosite.dat country.mmdb; do
-    if [ ! -s "$NIKKI_RUN_DIR/$f" ]; then
-        echo "错误: geox 数据集 $f 下载失败或为空, 终止构建"
-        exit 1
-    fi
-done
-echo "✅ 已内置 geox 数据集 (给 nikki):"
-ls -lah "$NIKKI_RUN_DIR"
+if [ "${INCLUDE_GEOX:-yes}" = "yes" ]; then
+    NIKKI_RUN_DIR="/home/build/immortalwrt/files/etc/nikki/run"
+    mkdir -p "$NIKKI_RUN_DIR"
+    wget -q --timeout=60 -t 3 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat" -O "$NIKKI_RUN_DIR/geoip.dat"
+    wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "$NIKKI_RUN_DIR/geosite.dat"
+    wget -q --timeout=60 -t 3 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb" -O "$NIKKI_RUN_DIR/country.mmdb"
+    for f in geoip.dat geosite.dat country.mmdb; do
+        if [ ! -s "$NIKKI_RUN_DIR/$f" ]; then
+            echo "错误: geox 数据集 $f 下载失败或为空, 终止构建"
+            exit 1
+        fi
+    done
+    echo "✅ 已内置 geox 数据集 (给 nikki):"
+    ls -lah "$NIKKI_RUN_DIR"
+else
+    echo "⚪️ 未内置 geox 数据集 (INCLUDE_GEOX=no)"
+fi
 
 # 输出调试信息
 echo "$(date '+%Y-%m-%d %H:%M:%S') - 开始构建固件..."

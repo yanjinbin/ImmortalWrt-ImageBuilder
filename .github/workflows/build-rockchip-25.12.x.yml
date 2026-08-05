@@ -162,67 +162,38 @@ on:
         description: "备注说明 (可选, 会写入本次 Release 说明)"
         required: false
         default: ""
+      nikki_version:
+        description: "OpenWrt-nikki 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-6b4e263)"
+        required: false
+        default: "latest"
+      uniwrt_version:
+        description: "uniwrt-luci 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-adef3c1)"
+        required: false
+        default: "latest"
+      footstrap_version:
+        description: "luci-theme-footstrap 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-eb24dd5)"
+        required: false
+        default: "latest"
+      include_geox:
+        description: "是否内置 geox 数据集 (geoip/geosite/mmdb)"
+        required: true
+        default: "yes"
+        type: choice
+        options:
+          - "yes"
+          - "no"
 
 permissions:
   contents: write
 
 jobs:
-  # 用 OpenWrt 25.12 SDK (aarch64_generic) 编译本仓库 fork 魔改的插件:
-  #   nikki 不再编译: 直接下载 yanjinbin/OpenWrt-nikki 的预编译 release 包
-  #   (mihomo 由主 job 直接下载 MetaCubeX 预编译二进制)
-  #   yanjinbin/uniwrt-luci          -> luci-theme-uniwrt
-  #   yanjinbin/luci-theme-footstrap -> luci-theme-footstrap
-  # 每次构建都拉取 fork 最新 main 分支, 保证魔改内容进入固件
-  build-fork-packages:
-    name: 编译 fork 插件 ${{ matrix.name }}
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: uniwrt-luci
-            repository: yanjinbin/uniwrt-luci
-            feed: uniwrt
-            packages: "luci-theme-uniwrt"
-          - name: luci-theme-footstrap
-            repository: yanjinbin/luci-theme-footstrap
-            feed: footstrap
-            packages: "luci-theme-footstrap"
-
-    steps:
-      - name: Checkout ${{ matrix.repository }}
-        id: checkout
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ matrix.repository }}
-
-      - name: 记录 fork commit
-        run: |
-          echo "${{ steps.checkout.outputs.commit }}" > commit-${{ matrix.name }}.txt
-          echo "fork ${{ matrix.name }} commit: ${{ steps.checkout.outputs.commit }}"
-
-      - name: 用 OpenWrt 25.12 SDK 编译 (aarch64_generic)
-        uses: openwrt/gh-action-sdk@main
-        env:
-          # release 版 SDK 镜像自带工具链, 避免 snapshot 容器运行时下载 258MB
-          ARCH: aarch64_generic-25.12.4
-          FEEDNAME: ${{ matrix.feed }}
-          PACKAGES: ${{ matrix.packages }}
-          INDEX: 1
-          NO_REFRESH_CHECK: true
-          V: s
-
-      - name: 上传编译产物
-        uses: actions/upload-artifact@v7
-        with:
-          name: fork-${{ matrix.name }}
-          path: |
-            bin/packages/**/*.apk
-            commit-${{ matrix.name }}.txt
-          if-no-files-found: error
-
+  # fork 插件不再在此仓库用 SDK 编译, 统一使用各 fork 仓库自己的 prebuilt release
+  # (release 标签带 commit hash, 资产为固定名称的 tarball):
+  #   yanjinbin/OpenWrt-nikki          -> nikki-aarch64_generic-openwrt-25.12.tar.gz
+  #   yanjinbin/uniwrt-luci            -> luci-theme-uniwrt-aarch64_generic-openwrt-25.12.tar.gz
+  #   yanjinbin/luci-theme-footstrap   -> luci-theme-footstrap-aarch64_generic-openwrt-25.12.tar.gz
+  # 版本输入支持 latest 或指定 release tag; mihomo 由主 job 直接下载 MetaCubeX 预编译二进制
   build:
-    needs: build-fork-packages
     runs-on: ubuntu-22.04
 
     steps:
@@ -251,21 +222,43 @@ jobs:
             fi
           fi
 
-      - name: Download fork 自编译插件
-        uses: actions/download-artifact@v8
-        with:
-          pattern: fork-*
-          path: ${{ github.workspace }}/fork-packages
-          merge-multiple: true
-
-      - name: 读取 fork 插件 commit
+      - name: 下载 fork 插件预编译 release (latest 或指定版本)
         run: |
           set -euo pipefail
-          UNIWRT_COMMIT="$(cat "${{ github.workspace }}/fork-packages/commit-uniwrt-luci.txt" 2>/dev/null || echo main)"
-          FOOTSTRAP_COMMIT="$(cat "${{ github.workspace }}/fork-packages/commit-luci-theme-footstrap.txt" 2>/dev/null || echo main)"
-          echo "UNIWRT_COMMIT=${UNIWRT_COMMIT:0:7}" >> "$GITHUB_ENV"
-          echo "FOOTSTRAP_COMMIT=${FOOTSTRAP_COMMIT:0:7}" >> "$GITHUB_ENV"
-          echo "✅ uniwrt-luci @ ${UNIWRT_COMMIT:0:7} / luci-theme-footstrap @ ${FOOTSTRAP_COMMIT:0:7}"
+          mkdir -p "${{ github.workspace }}/fork-packages"
+
+          fetch_release() {
+            local repo="$1" version="$2" asset="$3" dest="$4"
+            local url
+            if [ "$version" = "latest" ]; then
+              url="https://github.com/${repo}/releases/latest/download/${asset}"
+            else
+              url="https://github.com/${repo}/releases/download/${version}/${asset}"
+            fi
+            echo "下载: ${url}"
+            curl -fL --retry 3 --retry-all-errors --connect-timeout 20 -o "/tmp/${dest}" "${url}"
+            [ -s "/tmp/${dest}" ] || { echo "错误: ${asset} 下载失败"; exit 1; }
+            mkdir -p "/tmp/${dest}.d"
+            tar -xzf "/tmp/${dest}" -C "/tmp/${dest}.d"
+            find "/tmp/${dest}.d" -type f -name '*.apk' -exec cp -v {} "${{ github.workspace }}/fork-packages/" \;
+          }
+
+          fetch_release yanjinbin/OpenWrt-nikki "${{ inputs.nikki_version }}" nikki-aarch64_generic-openwrt-25.12.tar.gz nikki.tar.gz
+          fetch_release yanjinbin/uniwrt-luci "${{ inputs.uniwrt_version }}" luci-theme-uniwrt-aarch64_generic-openwrt-25.12.tar.gz uniwrt.tar.gz
+          fetch_release yanjinbin/luci-theme-footstrap "${{ inputs.footstrap_version }}" luci-theme-footstrap-aarch64_generic-openwrt-25.12.tar.gz footstrap.tar.gz
+
+          NIKKI_COMMIT="$(cat /tmp/nikki.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7)"
+          UNIWRT_COMMIT="$(cat /tmp/uniwrt.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7)"
+          FOOTSTRAP_COMMIT="$(cat /tmp/footstrap.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7)"
+          NIKKI_VER="$(find "${{ github.workspace }}/fork-packages" -maxdepth 1 -name 'nikki-*.apk' -exec basename {} \; 2>/dev/null | sed -nE 's/.*nikki-([^/]*)\.apk/\1/p' | head -1)"
+          LUCI_NIKKI_VER="$(find "${{ github.workspace }}/fork-packages" -maxdepth 1 -name 'luci-app-nikki-*.apk' -exec basename {} \; 2>/dev/null | sed -nE 's/.*nikki-([^/]*)\.apk/\1/p' | head -1)"
+          echo "NIKKI_COMMIT=${NIKKI_COMMIT:-latest}" >> "$GITHUB_ENV"
+          echo "UNIWRT_COMMIT=${UNIWRT_COMMIT:-latest}" >> "$GITHUB_ENV"
+          echo "FOOTSTRAP_COMMIT=${FOOTSTRAP_COMMIT:-latest}" >> "$GITHUB_ENV"
+          echo "NIKKI_VER=${NIKKI_VER:-unknown}" >> "$GITHUB_ENV"
+          echo "LUCI_NIKKI_VER=${LUCI_NIKKI_VER:-unknown}" >> "$GITHUB_ENV"
+          echo "✅ nikki @ ${NIKKI_COMMIT:-latest} / uniwrt @ ${UNIWRT_COMMIT:-latest} / footstrap @ ${FOOTSTRAP_COMMIT:-latest}"
+          ls -lah "${{ github.workspace }}/fork-packages/"
 
       - name: 下载 Bandix Plus 官方 APK
         run: |
@@ -300,35 +293,6 @@ jobs:
 
           echo "✅ 已导入 Bandix Plus 官方 APK:"
           ls -lah "$DEST"
-
-      - name: 下载 yanjinbin/OpenWrt-nikki 预编译包 (不编译)
-        run: |
-          set -euo pipefail
-          URL="https://github.com/yanjinbin/OpenWrt-nikki/releases/latest/download/nikki-aarch64_generic-openwrt-25.12.tar.gz"
-          # fork 预编译工作流可能尚未发布, 等待重试
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fL --retry 3 -o /tmp/nikki-prebuilt.tar.gz "$URL"; then
-              echo "✅ 第 $attempt 次下载成功"
-              break
-            fi
-            echo "⚠️ 第 $attempt 次下载失败, 30 秒后重试..."
-            sleep 30
-          done
-          [ -s /tmp/nikki-prebuilt.tar.gz ] || { echo "错误: nikki 预编译包下载失败"; exit 1; }
-          mkdir -p /tmp/nikki-prebuilt
-          tar -xzf /tmp/nikki-prebuilt.tar.gz -C /tmp/nikki-prebuilt
-          mkdir -p "${{ github.workspace }}/fork-packages"
-          cp /tmp/nikki-prebuilt/*.apk "${{ github.workspace }}/fork-packages/"
-          echo "✅ 已导入 nikki 预编译包:"
-          ls -lah "${{ github.workspace }}/fork-packages/"
-          NIKKI_COMMIT="$(ls /tmp/nikki-prebuilt/luci-i18n-nikki-zh-cn-*~*.apk 2>/dev/null | sed -nE 's/.*~([0-9a-f]{7,})\.apk/\1/p' | head -1)"
-          NIKKI_COMMIT="${NIKKI_COMMIT:-main}"
-          NIKKI_VER="$(ls /tmp/nikki-prebuilt/nikki-*.apk 2>/dev/null | sed -nE 's/.*nikki-(.*)\.apk/\1/p' | head -1)"
-          LUCI_NIKKI_VER="$(ls /tmp/nikki-prebuilt/luci-app-nikki-*.apk 2>/dev/null | sed -nE 's/.*nikki-(.*)\.apk/\1/p' | head -1)"
-          echo "NIKKI_COMMIT=$NIKKI_COMMIT" >> "$GITHUB_ENV"
-          echo "NIKKI_VER=$NIKKI_VER" >> "$GITHUB_ENV"
-          echo "LUCI_NIKKI_VER=$LUCI_NIKKI_VER" >> "$GITHUB_ENV"
-          echo "✅ nikki 源码 commit: $NIKKI_COMMIT (nikki $NIKKI_VER / luci-app-nikki $LUCI_NIKKI_VER)"
 
       - name: 下载 mihomo 预编译二进制 (MetaCubeX releases, 不自行编译)
         run: |
@@ -404,6 +368,7 @@ jobs:
               -v "${{ github.workspace }}/rockchip/build25.sh:/home/build/immortalwrt/build.sh" \
               -e PROFILE=$profile \
               -e INCLUDE_DOCKER=$include_docker \
+              -e INCLUDE_GEOX="${{ inputs.include_geox }}" \
               -e ROOTFS_PARTSIZE=$ROOTFS_SIZE \
               -e ENABLE_PPPOE="$enable_pppoe" \
               -e PPPOE_ACCOUNT="$pppoe_account" \
@@ -460,8 +425,13 @@ jobs:
             echo ""
             echo "## 🧩 已集成插件/主题"
             echo "- 代理: nikki ($NIKKI_VER) @ $NIKKI_COMMIT + luci-app-nikki ($LUCI_NIKKI_VER) + mihomo (MetaCubeX 预编译) (fork 魔改: 批量上传/重载清连接)"
-            echo "- 代理数据: 内置 geoip.dat / geosite.dat / country.mmdb (构建时原生直连下载)"
+            if [ "${{ inputs.include_geox }}" = "yes" ]; then
+              echo "- 代理数据: 内置 geoip.dat / geosite.dat / country.mmdb (构建时原生直连下载)"
+            else
+              echo "- 代理数据: 未内置 (运行时按需下载)"
+            fi
             echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT / luci-theme-openwrt (imm 官方)"
+            echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }}"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
             echo "- 监控/扩容: luci-app-bandix / luci-app-bandix-plus / luci-app-partexp"
             echo ""
