@@ -40,15 +40,20 @@ else
   ls -lah /home/build/immortalwrt/packages/
 fi
 
-# ============= fork 自编译插件 (nikki / uniwrt / footstrap) =============
+# ============= Actions 准备的第三方 APK (fork 插件 + Bandix Plus 官方包) =============
 # 移除 wukongdaily/apk 仓库中的上游 nikki 包, 避免与下方 fork 编译产物冲突
 rm -f /home/build/immortalwrt/packages/nikki-*.apk \
       /home/build/immortalwrt/packages/luci-app-nikki-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-nikki-*.apk
 
-# 导入 GitHub Actions 中用 SDK 编译好的 fork 插件 (来自 build-fork-packages job)
+# 移除第三方仓库中可能存在的 Bandix Plus 旧版本，使用工作流下载并校验的官方 APK
+rm -f /home/build/immortalwrt/packages/bandix-plus-*.apk \
+      /home/build/immortalwrt/packages/luci-app-bandix-plus-*.apk \
+      /home/build/immortalwrt/packages/luci-i18n-bandix-plus-*.apk
+
+# 导入 GitHub Actions 准备的 APK（SDK 编译的 fork 插件 + 已校验的 Bandix Plus 官方包）
 if [ -d /home/build/immortalwrt/fork-packages ]; then
-    echo "✅ 正在导入 fork 自编译插件..."
+    echo "✅ 正在导入 Actions 准备的第三方 APK..."
     # upload-artifact 会保留 bin/packages/... 嵌套路径, 递归查找所有 apk 再拷贝
     find /home/build/immortalwrt/fork-packages -type f -name '*.apk' \
       -exec cp -v {} /home/build/immortalwrt/packages/ \; || echo "⚠️ 未找到 fork 编译产物"

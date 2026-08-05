@@ -40,7 +40,7 @@
 - 主题：luci-theme-openwrt（默认，官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`）；已移除 argon
 - LuCI 免密登录：默认 365 天（`luci.sauth.cookie_days=365`，rpcd `sessiontime` 固定 604800 不放大；cookie + localStorage 双保险，覆盖通用/OpenWrt/uniwrt/footstrap/bootstrap 主题；密码页可改"登录时长（天）"）
 - 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库），默认预装 collectd 常用模块：CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度（CPU/GPU 温度，自动带 lm-sensors），首启自动启用
-- 流量监控：luci-app-bandix（timsaya，wukongdaily/apk 源）
+- 流量监控：luci-app-bandix（基础版）+ luci-app-bandix-plus（多接口版）；Plus 后端、前端和中文包均使用 timsaya 官方 Release APK 并校验 SHA-256
 - 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）
 
 **默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.1.1`，可选 `192.168.100.1` 等），仅对多网口机型生效。

@@ -247,6 +247,39 @@ jobs:
           path: ${{ github.workspace }}/fork-packages
           merge-multiple: true
 
+      - name: 下载 Bandix Plus 官方 APK
+        run: |
+          set -euo pipefail
+
+          DEST="${{ github.workspace }}/fork-packages/bandix-plus"
+          mkdir -p "$DEST"
+
+          download_apk() {
+            local url="$1"
+            local output="$2"
+            local sha256="$3"
+
+            echo "下载: $url"
+            curl -fL --retry 3 --retry-all-errors --connect-timeout 20 -o "$output" "$url"
+            printf '%s  %s\n' "$sha256" "$output" | sha256sum -c -
+          }
+
+          download_apk \
+            "https://github.com/timsaya/openwrt-bandix-plus/releases/download/v0.1.2/bandix-plus-0.1.2-r1_aarch64_generic.apk" \
+            "$DEST/bandix-plus-0.1.2-r1_aarch64_generic.apk" \
+            "91b7d3f7a27788d5708c5d3d1b0a933a8bfbafec4a8f82fb59f0aaacb567c197"
+          download_apk \
+            "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r1/luci-app-bandix-plus-0.1.3-r1_all.apk" \
+            "$DEST/luci-app-bandix-plus-0.1.3-r1_all.apk" \
+            "d3af8ea19cbd7e15ed79f548404bd59f969bbeacc5abb391a3003b5cfe8691eb"
+          download_apk \
+            "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r1/luci-i18n-bandix-plus-zh-cn-26.211.58145.105dcec_all.apk" \
+            "$DEST/luci-i18n-bandix-plus-zh-cn-26.211.58145.105dcec_all.apk" \
+            "2d52caf4bcf6b8e87778a3d5cb35a47530892b10272a6554df30f67f8afa0ab3"
+
+          echo "✅ 已导入 Bandix Plus 官方 APK:"
+          ls -lah "$DEST"
+
       - name: 下载 yanjinbin/OpenWrt-nikki 预编译包 (不编译)
         run: |
           set -euo pipefail
@@ -397,7 +430,7 @@ jobs:
             echo "- 代理: nikki + luci-app-nikki (fork 魔改: 批量上传/重载清连接) + mihomo (MetaCubeX 预编译)"
             echo "- 主题: luci-theme-uniwrt / luci-theme-footstrap / luci-theme-openwrt"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
-            echo "- 监控/扩容: luci-app-bandix / luci-app-partexp"
+            echo "- 监控/扩容: luci-app-bandix / luci-app-bandix-plus / luci-app-partexp"
             echo ""
             echo "## 📦 固件文件"
             ls -lh "${{ github.workspace }}/bin/targets/rockchip/armv8/"*.img.gz 2>/dev/null \
