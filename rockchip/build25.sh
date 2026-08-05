@@ -66,9 +66,9 @@ fi
 if [ "${INCLUDE_GEOX:-yes}" = "yes" ]; then
     NIKKI_RUN_DIR="/home/build/immortalwrt/files/etc/nikki/run"
     mkdir -p "$NIKKI_RUN_DIR"
-    wget -q --timeout=60 -t 3 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat" -O "$NIKKI_RUN_DIR/geoip.dat"
+    wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -O "$NIKKI_RUN_DIR/geoip.dat"
     wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "$NIKKI_RUN_DIR/geosite.dat"
-    wget -q --timeout=60 -t 3 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb" -O "$NIKKI_RUN_DIR/country.mmdb"
+    wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/geoip/releases/latest/download/Country.mmdb" -O "$NIKKI_RUN_DIR/country.mmdb"
     for f in geoip.dat geosite.dat country.mmdb; do
         if [ ! -s "$NIKKI_RUN_DIR/$f" ]; then
             echo "错误: geox 数据集 $f 下载失败或为空, 终止构建"

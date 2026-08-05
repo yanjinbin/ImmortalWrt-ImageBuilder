@@ -8,8 +8,9 @@ echo "Starting 99-custom.sh at $(date)" >>$LOGFILE
 # 数据集文件已随固件内置在 /etc/nikki/run, 首次启动免下载; 自动更新开启时走以下地址
 if uci -q get nikki.mixin >/dev/null; then
     uci set nikki.mixin.geosite_url='https://ghproxy.net/https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
-    uci set nikki.mixin.geoip_dat_url='https://ghproxy.net/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat'
-    uci set nikki.mixin.geoip_mmdb_url='https://ghproxy.net/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb'
+    uci set nikki.mixin.geoip_mmdb_url='https://ghproxy.net/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/Country.mmdb'
+    uci set nikki.mixin.geoip_dat_url='https://ghproxy.net/https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+    uci set nikki.mixin.geoip_asn_url='https://ghproxy.net/https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb'
     uci commit nikki
     echo "✅ 已设置 nikki geox 更新源 (ghproxy.net)" >>$LOGFILE
 fi
