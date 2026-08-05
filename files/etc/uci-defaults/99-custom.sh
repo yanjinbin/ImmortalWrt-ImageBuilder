@@ -52,6 +52,32 @@ echo "Interface count: $count" >>$LOGFILE
 board_name=$(cat /tmp/sysinfo/board_name 2>/dev/null || echo "unknown")
 echo "Board detected: $board_name" >>$LOGFILE
 
+# 2.1 设置默认主机名: ImmortalWrt-<软路由型号>-Gateway
+model_name=""
+case "$board_name" in
+    "radxa,e20c") model_name="E20C" ;;
+    "friendlyarm,nanopi-r2s") model_name="NanoPi-R2S" ;;
+    "friendlyarm,nanopi-r2c") model_name="NanoPi-R2C" ;;
+    "friendlyarm,nanopi-r2c-plus") model_name="NanoPi-R2C-Plus" ;;
+    "friendlyarm,nanopi-r3s") model_name="NanoPi-R3S" ;;
+    "friendlyarm,nanopi-r4s") model_name="NanoPi-R4S" ;;
+    "friendlyarm,nanopi-r4se") model_name="NanoPi-R4SE" ;;
+    "friendlyarm,nanopi-r5c") model_name="NanoPi-R5C" ;;
+    "friendlyarm,nanopi-r5s") model_name="NanoPi-R5S" ;;
+    "friendlyarm,nanopi-r6c") model_name="NanoPi-R6C" ;;
+    "friendlyarm,nanopi-r6s") model_name="NanoPi-R6S" ;;
+    "friendlyarm,nanopi-r76s") model_name="NanoPi-R76S" ;;
+    "friendlyarm,nanopc-t4") model_name="NanoPC-T4" ;;
+    "friendlyarm,nanopc-t6") model_name="NanoPC-T6" ;;
+    *)
+        model_name=$(echo "$board_name" | sed 's/^[^,]*,\?//' | tr 'a-z' 'A-Z')
+        ;;
+esac
+[ -z "$model_name" ] || [ "$model_name" = "UNKNOWN" ] && model_name="Router"
+uci set system.@system[0].hostname="ImmortalWrt-${model_name}-Gateway"
+uci commit system
+echo "Hostname set to: ImmortalWrt-${model_name}-Gateway" >>"$LOGFILE"
+
 wan_ifname=""
 lan_ifnames=""
 # 此处特殊处理个别开发板网口顺序问题
