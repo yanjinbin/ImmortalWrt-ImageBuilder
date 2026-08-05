@@ -233,8 +233,11 @@ jobs:
       
       - name: Validate PPPoE Inputs
         run: |
-          if [[ "${{ inputs.enable_pppoe }}" == "yes" ]]; then
-            if [[ -z "${{ inputs.pppoe_account }}" || -z "${{ inputs.pppoe_password }}" ]]; then
+          enable_pppoe=$(jq -r '.inputs.enable_pppoe // ""' "$GITHUB_EVENT_PATH")
+          pppoe_account=$(jq -r '.inputs.pppoe_account // ""' "$GITHUB_EVENT_PATH")
+          pppoe_password=$(jq -r '.inputs.pppoe_password // ""' "$GITHUB_EVENT_PATH")
+          if [[ "$enable_pppoe" == "yes" ]]; then
+            if [[ -z "$pppoe_account" || -z "$pppoe_password" ]]; then
               echo "Error: PPPoE account and password must be provided when PPPoE is enabled!"
               exit 1
             fi
@@ -264,17 +267,18 @@ jobs:
             printf '%s  %s\n' "$sha256" "$output" | sha256sum -c -
           }
 
+          # ImageBuilder 本地 APK 索引按「包名-版本.apk」取文件，不能保留 Release 的架构后缀。
           download_apk \
             "https://github.com/timsaya/openwrt-bandix-plus/releases/download/v0.1.2/bandix-plus-0.1.2-r1_aarch64_generic.apk" \
-            "$DEST/bandix-plus-0.1.2-r1_aarch64_generic.apk" \
+            "$DEST/bandix-plus-0.1.2-r1.apk" \
             "91b7d3f7a27788d5708c5d3d1b0a933a8bfbafec4a8f82fb59f0aaacb567c197"
           download_apk \
             "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r1/luci-app-bandix-plus-0.1.3-r1_all.apk" \
-            "$DEST/luci-app-bandix-plus-0.1.3-r1_all.apk" \
+            "$DEST/luci-app-bandix-plus-0.1.3-r1.apk" \
             "d3af8ea19cbd7e15ed79f548404bd59f969bbeacc5abb391a3003b5cfe8691eb"
           download_apk \
             "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r1/luci-i18n-bandix-plus-zh-cn-26.211.58145.105dcec_all.apk" \
-            "$DEST/luci-i18n-bandix-plus-zh-cn-26.211.58145.105dcec_all.apk" \
+            "$DEST/luci-i18n-bandix-plus-zh-cn-26.211.58145~105dcec.apk" \
             "2d52caf4bcf6b8e87778a3d5cb35a47530892b10272a6554df30f67f8afa0ab3"
 
           echo "✅ 已导入 Bandix Plus 官方 APK:"
@@ -342,6 +346,9 @@ jobs:
         run: |
           profile="${{ github.event.inputs.profile }}"
           include_docker="${{ github.event.inputs.include_docker }}"
+          enable_pppoe=$(jq -r '.inputs.enable_pppoe // ""' "$GITHUB_EVENT_PATH")
+          pppoe_account=$(jq -r '.inputs.pppoe_account // ""' "$GITHUB_EVENT_PATH")
+          pppoe_password=$(jq -r '.inputs.pppoe_password // ""' "$GITHUB_EVENT_PATH")
           rootfs_partsize="${{ github.event.inputs.rootfs_partsize }}"
           case "$rootfs_partsize" in
             1G)
@@ -373,9 +380,9 @@ jobs:
               -e PROFILE=$profile \
               -e INCLUDE_DOCKER=$include_docker \
               -e ROOTFS_PARTSIZE=$ROOTFS_SIZE \
-              -e ENABLE_PPPOE=${{ inputs.enable_pppoe }} \
-              -e PPPOE_ACCOUNT=${{ inputs.pppoe_account }} \
-              -e PPPOE_PASSWORD=${{ inputs.pppoe_password }} \
+              -e ENABLE_PPPOE="$enable_pppoe" \
+              -e PPPOE_ACCOUNT="$pppoe_account" \
+              -e PPPOE_PASSWORD="$pppoe_password" \
           immortalwrt/imagebuilder:rockchip-armv8-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
         
     
