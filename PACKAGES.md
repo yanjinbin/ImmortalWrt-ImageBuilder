@@ -16,9 +16,9 @@
 | luci-theme-kucat      | 酷猫主题                  | [sirpdboy/luci-theme-kucat](https://github.com/sirpdboy/luci-theme-kucat)                 |
 | luci-app-mosdns                | 高性能 DNS 分流器，支持 DoH/DoQ 等         | [sbwml/luci-app-mosdns](https://github.com/sbwml/luci-app-mosdns)                     |
 | luci-app-nekobox               | 代理工具      | [Thaolga/luci-app-nekobox](https://github.com/Thaolga/openwrt-nekobox)       |
-| luci-app-nikki                 | 代理工具 (fork 自编译)   | [yanjinbin/OpenWrt-nikki](https://github.com/yanjinbin/OpenWrt-nikki) (含 mihomo-meta / nikki / luci-app-nikki) |
-| luci-theme-uniwrt              | UniWRT 主题 (fork 自编译) | [yanjinbin/uniwrt-luci](https://github.com/yanjinbin/uniwrt-luci)                                          |
-| luci-theme-footstrap           | Footstrap 主题 (fork 自编译) | [yanjinbin/luci-theme-footstrap](https://github.com/yanjinbin/luci-theme-footstrap)                     |
+| luci-app-nikki                 | 代理工具 (fork 自编译; nikki 2026.04.08-r2 / luci-app-nikki 1.26.1-r1 @ 6b4e263)   | [yanjinbin/OpenWrt-nikki](https://github.com/yanjinbin/OpenWrt-nikki) (含 mihomo-meta / nikki / luci-app-nikki) |
+| luci-theme-uniwrt              | UniWRT 主题 (fork 自编译 @ adef3c1) | [yanjinbin/uniwrt-luci](https://github.com/yanjinbin/uniwrt-luci)                                          |
+| luci-theme-footstrap           | Footstrap 主题 (fork 自编译 @ eb24dd5) | [yanjinbin/luci-theme-footstrap](https://github.com/yanjinbin/luci-theme-footstrap)                     |
 | luci-theme-openwrt             | OpenWrt 官方主题 (imm 仓库内) | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
 | luci-app-statistics            | 流量统计 (imm 仓库内)    | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
 | luci-app-momo                 | 代理工具               | [nikkinikki-org/momo](https://github.com/nikkinikki-org/OpenWrt-momo)                                                                     |
@@ -35,3 +35,5 @@
 | luci-app-bandix      | Bandix流量监控 0.11                 | [timsaya/luci-app-bandix](https://github.com/timsaya/luci-app-bandix)                 |
 | luci-app-bandix-plus | Bandix Plus 多接口流量监控       | [timsaya/luci-app-bandix-plus](https://github.com/timsaya/luci-app-bandix-plus)       |
 | luci-app-rtp2httpd      |  IPTV 流媒体转发服务器                 | [stackia/rtp2httpd](https://github.com/stackia/rtp2httpd)                 |                    |
+
+> fork 插件（nikki / luci-theme-uniwrt / luci-theme-footstrap）每次构建的实际源码 commit 以对应 Release 说明为准，本表为当前快照。

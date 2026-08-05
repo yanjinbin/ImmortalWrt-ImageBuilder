@@ -191,9 +191,15 @@ jobs:
 
     steps:
       - name: Checkout ${{ matrix.repository }}
+        id: checkout
         uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repository }}
+
+      - name: 记录 fork commit
+        run: |
+          echo "${{ steps.checkout.outputs.commit }}" > commit-${{ matrix.name }}.txt
+          echo "fork ${{ matrix.name }} commit: ${{ steps.checkout.outputs.commit }}"
 
       - name: 用 OpenWrt 25.12 SDK 编译 (aarch64_generic)
         uses: openwrt/gh-action-sdk@main
@@ -210,7 +216,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: fork-${{ matrix.name }}
-          path: bin/packages/**/*.apk
+          path: |
+            bin/packages/**/*.apk
+            commit-${{ matrix.name }}.txt
           if-no-files-found: error
 
   build:
@@ -249,6 +257,15 @@ jobs:
           pattern: fork-*
           path: ${{ github.workspace }}/fork-packages
           merge-multiple: true
+
+      - name: 读取 fork 插件 commit
+        run: |
+          set -euo pipefail
+          UNIWRT_COMMIT="$(cat "${{ github.workspace }}/fork-packages/commit-uniwrt-luci.txt" 2>/dev/null || echo main)"
+          FOOTSTRAP_COMMIT="$(cat "${{ github.workspace }}/fork-packages/commit-luci-theme-footstrap.txt" 2>/dev/null || echo main)"
+          echo "UNIWRT_COMMIT=${UNIWRT_COMMIT:0:7}" >> "$GITHUB_ENV"
+          echo "FOOTSTRAP_COMMIT=${FOOTSTRAP_COMMIT:0:7}" >> "$GITHUB_ENV"
+          echo "✅ uniwrt-luci @ ${UNIWRT_COMMIT:0:7} / luci-theme-footstrap @ ${FOOTSTRAP_COMMIT:0:7}"
 
       - name: 下载 Bandix Plus 官方 APK
         run: |
@@ -304,6 +321,14 @@ jobs:
           cp /tmp/nikki-prebuilt/*.apk "${{ github.workspace }}/fork-packages/"
           echo "✅ 已导入 nikki 预编译包:"
           ls -lah "${{ github.workspace }}/fork-packages/"
+          NIKKI_COMMIT="$(ls /tmp/nikki-prebuilt/luci-i18n-nikki-zh-cn-*~*.apk 2>/dev/null | sed -nE 's/.*~([0-9a-f]{7,})\.apk/\1/p' | head -1)"
+          NIKKI_COMMIT="${NIKKI_COMMIT:-main}"
+          NIKKI_VER="$(ls /tmp/nikki-prebuilt/nikki-*.apk 2>/dev/null | sed -nE 's/.*nikki-(.*)\.apk/\1/p' | head -1)"
+          LUCI_NIKKI_VER="$(ls /tmp/nikki-prebuilt/luci-app-nikki-*.apk 2>/dev/null | sed -nE 's/.*nikki-(.*)\.apk/\1/p' | head -1)"
+          echo "NIKKI_COMMIT=$NIKKI_COMMIT" >> "$GITHUB_ENV"
+          echo "NIKKI_VER=$NIKKI_VER" >> "$GITHUB_ENV"
+          echo "LUCI_NIKKI_VER=$LUCI_NIKKI_VER" >> "$GITHUB_ENV"
+          echo "✅ nikki 源码 commit: $NIKKI_COMMIT (nikki $NIKKI_VER / luci-app-nikki $LUCI_NIKKI_VER)"
 
       - name: 下载 mihomo 预编译二进制 (MetaCubeX releases, 不自行编译)
         run: |
@@ -434,9 +459,9 @@ jobs:
             fi
             echo ""
             echo "## 🧩 已集成插件/主题"
-            echo "- 代理: nikki + luci-app-nikki (fork 魔改: 批量上传/重载清连接) + mihomo (MetaCubeX 预编译)"
+            echo "- 代理: nikki ($NIKKI_VER) @ $NIKKI_COMMIT + luci-app-nikki ($LUCI_NIKKI_VER) + mihomo (MetaCubeX 预编译) (fork 魔改: 批量上传/重载清连接)"
             echo "- 代理数据: 内置 geoip.dat / geosite.dat / country.mmdb (构建时原生直连下载)"
-            echo "- 主题: luci-theme-uniwrt / luci-theme-footstrap / luci-theme-openwrt"
+            echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT / luci-theme-openwrt (imm 官方)"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
             echo "- 监控/扩容: luci-app-bandix / luci-app-bandix-plus / luci-app-partexp"
             echo ""
