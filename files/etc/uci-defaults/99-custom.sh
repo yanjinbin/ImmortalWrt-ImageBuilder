@@ -3,6 +3,17 @@
 # Log file for debugging
 LOGFILE="/etc/config/uci-defaults-log.txt"
 echo "Starting 99-custom.sh at $(date)" >>$LOGFILE
+
+# 给 nikki 插件设置 geox 数据集更新源 (ghproxy.net)
+# 数据集文件已随固件内置在 /etc/nikki/run, 首次启动免下载; 自动更新开启时走以下地址
+if uci -q get nikki.mixin >/dev/null; then
+    uci set nikki.mixin.geosite_url='https://ghproxy.net/https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+    uci set nikki.mixin.geoip_dat_url='https://ghproxy.net/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat'
+    uci set nikki.mixin.geoip_mmdb_url='https://ghproxy.net/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb'
+    uci commit nikki
+    echo "✅ 已设置 nikki geox 更新源 (ghproxy.net)" >>$LOGFILE
+fi
+
 # 设置默认防火墙规则，方便单网口虚拟机首次访问 WebUI 
 # 因为本项目中 单网口模式是dhcp模式 直接就能上网并且访问web界面 避免新手每次都要修改/etc/config/network中的静态ip
 # 当你刷机运行后 都调整好了 你完全可以在web页面自行关闭 wan口防火墙的入站数据

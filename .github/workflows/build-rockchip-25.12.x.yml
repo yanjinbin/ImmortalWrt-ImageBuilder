@@ -435,6 +435,7 @@ jobs:
             echo ""
             echo "## 🧩 已集成插件/主题"
             echo "- 代理: nikki + luci-app-nikki (fork 魔改: 批量上传/重载清连接) + mihomo (MetaCubeX 预编译)"
+            echo "- 代理数据: 内置 geoip.dat / geosite.dat / country.mmdb (构建时原生直连下载)"
             echo "- 主题: luci-theme-uniwrt / luci-theme-footstrap / luci-theme-openwrt"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
             echo "- 监控/扩容: luci-app-bandix / luci-app-bandix-plus / luci-app-partexp"
