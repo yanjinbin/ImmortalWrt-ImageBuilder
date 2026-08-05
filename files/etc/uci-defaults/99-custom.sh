@@ -58,6 +58,41 @@ case "$board_name" in
         ;;
 esac
 
+# E20C 的 PCIe RTL8168H/8111H WAN 口会暴露 3 路 PHY LED，但当前固件未给它们
+# 设置默认触发器，导致 RJ45 网口灯不亮。动态读取 eth1 下的 LED 名称，避免依赖
+# enp1s0 等可能随内核变化的前缀；机身 green:wan/green:lan 指示灯保持原配置。
+configure_e20c_wan_phy_leds() {
+    [ "$board_name" = "radxa,e20c" ] || return 0
+
+    led_index=0
+    for led_path in "/sys/class/net/$wan_ifname"/*::lan; do
+        [ -e "$led_path/trigger" ] || continue
+
+        led_sysfs=${led_path##*/}
+        section="wan_phy_led$led_index"
+        uci -q delete "system.$section"
+        uci set "system.$section=led"
+        uci set "system.$section.name=WAN PHY LED $led_index"
+        uci set "system.$section.sysfs=$led_sysfs"
+        uci set "system.$section.trigger=netdev"
+        uci set "system.$section.dev=$wan_ifname"
+        uci set "system.$section.mode=link_10 link_100 link_1000 rx tx"
+
+        echo "Configured E20C WAN PHY LED $led_index: $led_sysfs -> $wan_ifname" >>"$LOGFILE"
+        led_index=$((led_index + 1))
+    done
+
+    if [ "$led_index" -eq 0 ]; then
+        echo "E20C WAN PHY LEDs not found under /sys/class/net/$wan_ifname" >>"$LOGFILE"
+        return 0
+    fi
+
+    uci commit system
+    echo "Configured $led_index E20C WAN PHY LEDs" >>"$LOGFILE"
+}
+
+configure_e20c_wan_phy_leds
+
 # 3. 配置网络
 if [ "$count" -eq 1 ]; then
     # 单网口设备，DHCP模式

@@ -33,6 +33,8 @@
 
 **默认支持机型**：FriendlyARM NanoPi R5C、Radxa E20C（工作流 `Build 25.12.x Rockchip` 中可选，默认 R5C）。
 
+**E20C 网口指示灯**：首启自动为 RTL8168H/8111H WAN RJ45 网口配置 10/100/1000M 链路和 RX/TX 活动指示，不影响机身 WAN/LAN 指示灯。
+
 **已集成插件/主题**：
 - 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，每次构建自动用 SDK 打包最新 main 分支，含魔改内容）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 主题：luci-theme-openwrt（默认，官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`）；已移除 argon
