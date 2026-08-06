@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+
+# 固件更新后刷新 LuCI 静态资源缓存键 (pkgs_update_time)
+#
+# 根因: 可复现构建把 /lib/apk/db/installed 的 mtime 归一化, 而 LuCI 用它的 mtime
+# 生成所有静态资源 URL 的 ?v= 参数 (runtime.uc 的 pkgs_update_time),
+# 导致每次刷机 ?v=/ETag 完全相同, 浏览器一直命中旧缓存 (主题 CSS/JS 不更新)。
+# 固件版本变化时 touch 该文件, ?v= 即变化, 浏览器自动拉取新资源。
+
+START=05
+
+start() {
+	rev="$(awk -F"'" '/DISTRIB_REVISION/{print $2}' /etc/openwrt_release 2>/dev/null)"
+	marker="/etc/fw-revision"
+	old=""
+	[ -f "$marker" ] && old="$(cat "$marker" 2>/dev/null)"
+	if [ -n "$rev" ] && [ "$rev" != "$old" ]; then
+		touch /lib/apk/db/installed 2>/dev/null || touch /usr/lib/opkg/status 2>/dev/null
+		echo "$rev" > "$marker"
+	fi
+}
