@@ -39,7 +39,9 @@
 - 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork 的 prebuilt release，构建时可选 latest 或指定 release tag，含魔改内容）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 主题：luci-theme-openwrt（默认，官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`）；已移除 argon
 - 默认主机名：ImmortalWrt-<软路由型号>-Gateway（如 E20C → `ImmortalWrt-E20C-Gateway`、NanoPi-R5C → `ImmortalWrt-NanoPi-R5C-Gateway`），首启按板型自动设置
-- LuCI 免密登录：默认 365 天（`luci.sauth.cookie_days=365`，rpcd `sessiontime` 固定 604800 不放大；cookie + localStorage 双保险，覆盖通用/OpenWrt/uniwrt/footstrap/bootstrap 主题；密码页可改"登录时长（天）"）
+- 默认登录密码：`666666`（LuCI 系统->管理权 可修改）
+- LuCI 登录时长：默认 396 天（`luci.sauth.cookie_days=396`，rpcd `sessiontime` 固定 604800 不放大；cookie + localStorage 双保险，覆盖通用/OpenWrt/uniwrt/footstrap/bootstrap 主题；密码页"登录时长（天）/ Login duration (days)"支持中英文显示）
+- 默认主题：Footstrap（`luci.main.mediaurlbase=/luci-static/footstrap`）
 - 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库），默认预装 collectd 常用模块：CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度（CPU/GPU 温度，自动带 lm-sensors），首启自动启用
 - 流量监控：luci-app-bandix（基础版）+ luci-app-bandix-plus（多接口版）；Plus 后端、前端和中文包均使用 timsaya 官方 Release APK 并校验 SHA-256
 - 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）

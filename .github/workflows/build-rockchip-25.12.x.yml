@@ -412,7 +412,7 @@ jobs:
             echo "- 设备: $DEV ($PROFILE)"
             echo "- LAN 管理地址: ${{ inputs.custom_router_ip }}"
             echo "- 登录用户名: root"
-            echo "- 登录密码: 无"
+            echo "- 登录密码: 666666"
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
             echo "- PPPoE: ${{ inputs.enable_pppoe }}"

@@ -10,7 +10,7 @@ var formData = {
 		pw1: null,
 		pw2: null
 	},
-	loginDays: 365
+	loginDays: 396
 };
 
 var callSetPassword = rpc.declare({
@@ -61,6 +61,11 @@ return view.extend({
 
 	render: function() {
 		var m, s, o;
+		var uiLangZh = ((document.documentElement.lang || 'en').toLowerCase().indexOf('zh') === 0);
+		var loginDaysLabel = uiLangZh ? '登录时长（天）' : 'Login duration (days)';
+		var loginDaysDesc = uiLangZh
+			? 'LuCI 登录 Cookie 保持有效天数，到期需重新输入密码。默认 396 天。服务器会话本身不变。'
+			: 'Days the LuCI login cookie stays valid without re-entering the password. Default: 396. The server session itself is unchanged.';
 
 		m = new form.JSONMap(formData, _('Router Password'), _('Changes the administrator password for accessing the device'));
 		m.readonly = !L.hasViewPermission();
@@ -71,10 +76,10 @@ return view.extend({
 		o.password = true;
 		o.validate = this.checkPassword;
 
-		o = s.option(form.Value, 'loginDays', _('Login duration (days)'));
+		o = s.option(form.Value, 'loginDays', loginDaysLabel);
 		o.datatype = 'uinteger';
 		o.optional = true;
-		o.description = _('Days the LuCI login cookie stays valid without re-entering the password. Default: 365. The server session itself is unchanged.');
+		o.description = loginDaysDesc;
 
 		o = s.option(form.Value, 'pw2', _('Confirmation'), ' ');
 		o.password = true;
