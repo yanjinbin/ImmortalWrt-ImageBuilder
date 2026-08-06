@@ -81,6 +81,13 @@ else
     echo "⚪️ 未内置 geox 数据集 (INCLUDE_GEOX=no)"
 fi
 
+# ============= 固件构建版本标记 (LuCI 底部栏展示, 北京时间精确到秒) =============
+BUILD_TIME_BJ="$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -u -d '+8 hours' '+%Y-%m-%d %H:%M:%S')"
+BUILD_COMMIT_SHORT="${BUILD_COMMIT:0:7}"
+[ -n "$BUILD_COMMIT_SHORT" ] || BUILD_COMMIT_SHORT="unknown"
+printf '构建: %s @ %s (北京时间)\n' "$BUILD_COMMIT_SHORT" "${BUILD_TIME_BJ:-unknown}" > /home/build/immortalwrt/files/etc/immortalwrt-build-info
+echo "固件构建版本标记: $(cat /home/build/immortalwrt/files/etc/immortalwrt-build-info)"
+
 # 输出调试信息
 echo "$(date '+%Y-%m-%d %H:%M:%S') - 开始构建固件..."
 echo "查看repositories信息——————"

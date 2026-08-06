@@ -369,6 +369,7 @@ jobs:
               -e PROFILE=$profile \
               -e INCLUDE_DOCKER=$include_docker \
               -e INCLUDE_GEOX="${{ inputs.include_geox }}" \
+              -e BUILD_COMMIT="${{ github.sha }}" \
               -e ROOTFS_PARTSIZE=$ROOTFS_SIZE \
               -e ENABLE_PPPOE="$enable_pppoe" \
               -e PPPOE_ACCOUNT="$pppoe_account" \
