@@ -406,7 +406,7 @@ jobs:
             echo ""
             echo "**构建仓库**: yanjinbin/ImmortalWrt-ImageBuilder"
             echo "**仓库提交**: ${{ github.sha }} (${{ github.ref_name }})"
-            echo "**构建时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "**构建时间**: $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -u -d '+8 hours' '+%Y-%m-%d %H:%M:%S') (北京时间)"
             echo ""
             echo "## ⚙️ 本次构建参数"
             echo "- ImmortalWrt 版本: ${{ inputs.luci_version }}"
