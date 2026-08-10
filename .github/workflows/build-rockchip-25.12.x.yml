@@ -158,6 +158,15 @@ on:
       pppoe_password:
         description: "宽带密码 (若启用PPPoE)"
         required: false
+      enable_ipv6:
+        description: |
+          是否开启 IPv6 (WAN6 DHCPv6 / LAN RA / IPv6 防火墙)
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
       remark:
         description: "备注说明 (可选, 会写入本次 Release 说明)"
         required: false
@@ -374,6 +383,7 @@ jobs:
               -e ENABLE_PPPOE="$enable_pppoe" \
               -e PPPOE_ACCOUNT="$pppoe_account" \
               -e PPPOE_PASSWORD="$pppoe_password" \
+              -e ENABLE_IPV6="${{ inputs.enable_ipv6 }}" \
           immortalwrt/imagebuilder:rockchip-armv8-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
         
     
@@ -417,6 +427,7 @@ jobs:
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
             echo "- PPPoE: ${{ inputs.enable_pppoe }}"
+            echo "- IPv6: ${{ inputs.enable_ipv6 }}"
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
             if [ -n "${{ inputs.remark }}" ]; then
               echo ""

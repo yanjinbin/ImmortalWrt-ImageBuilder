@@ -35,6 +35,13 @@ else
     . "$SETTINGS_FILE"
 fi
 
+# 检查配置文件ipv6-settings是否存在 该文件由build.sh动态生成
+IPV6_SETTINGS_FILE="/etc/config/ipv6-settings"
+enable_ipv6="yes"
+if [ -f "$IPV6_SETTINGS_FILE" ]; then
+    . "$IPV6_SETTINGS_FILE"
+fi
+
 # 1. 先获取所有物理接口列表
 ifnames=""
 for iface in /sys/class/net/*; do
@@ -198,6 +205,42 @@ elif [ "$count" -gt 1 ]; then
     fi
 
     uci commit network
+fi
+
+# 4. 是否关闭 IPv6 (由工作流 enable_ipv6 控制, 默认开启)
+echo "enable_ipv6 value: $enable_ipv6" >>$LOGFILE
+if [ "$enable_ipv6" = "no" ]; then
+    # 关闭 WAN6 / LAN6 接口
+    if uci -q get network.wan6 >/dev/null; then
+        uci set network.wan6.proto='none'
+    fi
+    uci -q delete network.lan6
+    uci -q delete network.lan.ip6assign
+    uci -q delete network.lan.ip6hint
+    uci -q delete network.lan.ip6ifaceid
+    uci -q delete network.lan.ip6class
+    # 关闭 LAN 的 IPv6 RA/DHCPv6 (odhcpd)
+    if uci -q get dhcp.lan >/dev/null; then
+        uci set dhcp.lan.ra='disabled'
+        uci set dhcp.lan.dhcpv6='disabled'
+        uci -q delete dhcp.lan.ra_management
+        uci -q delete dhcp.lan.ndp
+        uci -q delete dhcp.lan.ra_slaac
+    fi
+    # 禁用 odhcpd 服务 (若存在)
+    if [ -x /etc/init.d/odhcpd ]; then
+        /etc/init.d/odhcpd disable
+    fi
+    # 防火墙关闭 IPv6 处理
+    if uci -q get firewall.@defaults[0] >/dev/null; then
+        uci set firewall.@defaults[0].disable_ipv6='1'
+    fi
+    uci commit network
+    uci commit dhcp
+    uci commit firewall
+    echo "IPv6 已关闭 (WAN6=none, RA/DHCPv6 禁用, fw4 disable_ipv6=1)" >>$LOGFILE
+else
+    echo "IPv6 保持开启" >>$LOGFILE
 fi
 
 # 设置所有网口可访问网页终端
