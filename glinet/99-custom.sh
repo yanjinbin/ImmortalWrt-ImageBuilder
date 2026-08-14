@@ -104,5 +104,15 @@ uci commit
 FILE_PATH="/etc/openwrt_release"
 NEW_DESCRIPTION="Packaged by wukongdaily"
 sed -i "s/DISTRIB_DESCRIPTION='[^']*'/DISTRIB_DESCRIPTION='$NEW_DESCRIPTION'/" "$FILE_PATH"
+# uhttpd 性能与并发优化 (提升并发请求数、连接数、开启 HTTPS 监听)
+if uci -q get uhttpd.main >/dev/null 2>&1; then
+    uci set uhttpd.main.max_requests='30'
+    uci set uhttpd.main.max_connections='200'
+    uci -q del_list uhttpd.main.listen_https='0.0.0.0:443'
+    uci -q del_list uhttpd.main.listen_https='[::]:443'
+    uci add_list uhttpd.main.listen_https='0.0.0.0:443'
+    uci add_list uhttpd.main.listen_https='[::]:443'
+    uci commit uhttpd
+fi
 
 exit 0
