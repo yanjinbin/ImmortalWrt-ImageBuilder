@@ -25,7 +25,8 @@
 > 5、在UI上 新增luci版本的可选项，默认最新版25.12.x https://github.com/wukongdaily/AutoBuildImmortalWrt/discussions/426<br>
 > 6、支持设置管理地址的ip 比如192.168.100.1 这里强调 这项功能仅针对多网口机型 单网口的逻辑还是自动获取ip模式（dhcp）无固定ip<br>
 > 7、对于[插件追新的用户 建议前往run项目 下载run后 ](https://github.com/wukongdaily/RunFilesBuilder/discussions/41)用命令sh xx.run 覆盖安装 <br>
-> 8、支持24.10.x 、25.12.x 等版本 （包括x86-64-ISO、x86-64、rockchip、全志sunxi、无线路由器）
+> 8、支持24.10.x 、25.12.x 等版本 （包括x86-64-ISO、x86-64、rockchip、全志sunxi、无线路由器）<br>
+> 9、支持全平台构建工作流 IPv6 编译开关（默认开启，可选纯 IPv4 模式，运行时配置关闭且保留完整软件包）
 
 ## 🧩 本仓库定制内容
 
@@ -48,7 +49,9 @@
 
 **默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.1.1`，可选 `192.168.100.1` 等），仅对多网口机型生效。
 
-**IPv6 开关**：工作流 UI 中 `enable_ipv6` 可选 `yes`（默认，WAN6 DHCPv6 + LAN RA/DHCPv6 + IPv6 防火墙）/ `no`（仅运行时关闭：WAN6 置为 none、禁用 LAN RA/DHCPv6 与 odhcpd、防火墙 `disable_ipv6`，IPv6 相关软件包保留在固件中）。
+**全平台 IPv6 开关**：所有构建工作流（x86-64、Rockchip、MediaTek 无线路由器、Sunxi 全志、树莓派 Raspberry Pi、QEMU、斐讯 N1、ISO 安装器）UI 中均已支持 `enable_ipv6` 参数：
+- `yes`（默认）：保留完整 IPv6 网络支持（WAN6 自动获取 DHCPv6、LAN 启用 RA 与 DHCPv6 服务、放行 IPv6 防火墙流量）。
+- `no`（纯 IPv4 模式）：在固件首次开机时于运行时配置层面彻底关闭 IPv6（将 WAN6 协议置为 `none`、禁用 LAN 口 RA 与 DHCPv6 分配、停止并禁用 `odhcpd` 服务、防火墙开启 `disable_ipv6=1` 屏蔽 IPv6 流量）；**同时固件镜像中完整保留所有 IPv6 相关软件包（不卸载）**，便于用户日后在 LuCI Web 界面按需重新开启。
 
 **mihomo 版本/平台**：工作流 UI 支持选择或填写 mihomo 版本（默认 `1.19.27`，可选 `latest` 最新版或自定义版本号）和平台（默认 `arm64`，覆盖 R5C / R6S / E20C；可选 `amd64`、`armv7` 等或自定义）。
 
@@ -109,6 +112,7 @@ https://www.youtube.com/watch?v=7i6BQeitUtE
 - 该固件刷入【单网口设备】默认采用DHCP模式,自动获得ip。类似NAS的做法
 - 该固件刷入【多网口设备】默认WAN口采用DHCP模式，LAN 口ip为  `192.168.100.1` <br>其中eth0为WAN 其余网口均为LAN
 - 若用户在工作流中勾选了拨号信息 则WAN口模式为pppoe拨号模式。
+- 若用户在工作流中设置了 `enable_ipv6=no`，固件首启会在运行时配置中关闭 IPv6（WAN6 置为 none、LAN 关闭 RA/DHCPv6、禁用 odhcpd、fw4 开启 disable_ipv6），同时完整保留所有 IPv6 软件包。
 - 建议拨号用户使用之前重启一次光猫。
 - 综合上述特点，【单网口设备】应该先接路由器，先在上级路由器查看一下它的ip 再访问。
 - 上述特点 你都可以通过 `99-custom.sh` 配置和调整
