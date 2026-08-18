@@ -9,6 +9,13 @@ echo "Starting 99-custom.sh at $(date)" >> $LOGFILE
 echo "Building for profile: $PROFILE"
 # yml 传入的固件大小 ROOTFS_PARTSIZE
 echo "Building for ROOTFS_PARTSIZE: $ROOTFS_PARTSIZE"
+
+# 创建ipv6配置文件 yml传入环境变量ENABLE_IPV6 写入配置文件 供99-custom.sh读取
+mkdir -p /home/build/immortalwrt/files/etc/config
+cat << EOF > /home/build/immortalwrt/files/etc/config/ipv6-settings
+enable_ipv6=${ENABLE_IPV6:-yes}
+EOF
+
 # 输出调试信息
 echo "$(date '+%Y-%m-%d %H:%M:%S') - 开始构建arm64的rootfs.tar.gz"
 # 定义所需安装的包列表 下列插件你都可以自行删减

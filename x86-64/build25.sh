@@ -21,6 +21,12 @@ EOF
 echo "cat pppoe-settings"
 cat /home/build/immortalwrt/files/etc/config/pppoe-settings
 
+# 创建ipv6配置文件 yml传入环境变量ENABLE_IPV6 写入配置文件 供99-custom.sh读取
+mkdir -p /home/build/immortalwrt/files/etc/config
+cat << EOF > /home/build/immortalwrt/files/etc/config/ipv6-settings
+enable_ipv6=${ENABLE_IPV6:-yes}
+EOF
+
 if [ -z "$CUSTOM_PACKAGES" ]; then
   echo "⚪️ 未选择 任何第三方软件包"
 else
