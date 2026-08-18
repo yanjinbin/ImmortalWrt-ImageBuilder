@@ -517,6 +517,15 @@ on:
       pppoe_password:
         description: "宽带密码 (若启用PPPoE)"
         required: false
+      enable_ipv6:
+        description: |
+          是否开启 IPv6 (WAN6 DHCPv6 / LAN RA / IPv6 防火墙)
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
 
 
 permissions:
@@ -647,6 +656,7 @@ jobs:
               -v "${{ github.workspace }}/mediatek-filogic/build24.sh:/home/build/immortalwrt/build.sh" \
               -e PROFILE=$profile \
               -e INCLUDE_DOCKER=$include_docker \
+              -e ENABLE_IPV6="${{ inputs.enable_ipv6 }}" \
               -e ENABLE_PPPOE=${{ inputs.enable_pppoe }} \
               -e PPPOE_ACCOUNT=${{ inputs.pppoe_account }} \
               -e PPPOE_PASSWORD=${{ inputs.pppoe_password }} \

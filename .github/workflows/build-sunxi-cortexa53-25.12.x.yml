@@ -51,6 +51,15 @@ on:
           - '2G'
           - '3G'
           - '4G'
+      enable_ipv6:
+        description: |
+          是否开启 IPv6 (WAN6 DHCPv6 / LAN RA / IPv6 防火墙)
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
 
 
 permissions:
@@ -106,6 +115,7 @@ jobs:
               -e PROFILE=$profile \
               -e INCLUDE_DOCKER=$include_docker \
               -e ROOTFS_PARTSIZE=$ROOTFS_SIZE \
+              -e ENABLE_IPV6="${{ inputs.enable_ipv6 }}" \
           immortalwrt/imagebuilder:sunxi-cortexa53-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
          
 
