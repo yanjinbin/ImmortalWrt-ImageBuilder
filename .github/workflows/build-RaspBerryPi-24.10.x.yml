@@ -43,6 +43,15 @@ on:
         description: '请输入要编译固件大小 单位(MB)'
         required: true
         default: '1024'
+      enable_ipv6:
+        description: |
+          是否开启 IPv6 (WAN6 DHCPv6 / LAN RA / IPv6 防火墙)
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
 
 
 permissions:
@@ -111,6 +120,7 @@ jobs:
               -e LUCI_VERSION=$luci_version \
               -e INCLUDE_DOCKER=$include_docker \
               -e ROOTSIZE=$size \
+              -e ENABLE_IPV6="${{ inputs.enable_ipv6 }}" \
               immortalwrt/imagebuilder:$tag /bin/bash /home/build/openwrt/build.sh
           done
           ls ${{ github.workspace }}/bin/targets/bcm27xx/${{ env.cpu }}
