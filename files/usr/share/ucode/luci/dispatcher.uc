@@ -963,7 +963,7 @@ dispatch = function(_http, path) {
 				let cookie_name = (http.getenv('HTTPS') == 'on') ? 'sysauth_https' : 'sysauth_http',
 				    cookie_secure = (http.getenv('HTTPS') == 'on') ? '; secure' : '';
 
-				let cookie_maxage = (+(uci.get('luci', 'sauth', 'cookie_days') ?? 365)) * 86400;
+				let cookie_maxage = (+(uci.get('luci', 'sauth', 'cookie_days') ?? 396)) * 86400;
 
 				http.header('Set-Cookie', `${cookie_name}=${session.sid}; path=${build_url()}; SameSite=strict; Max-Age=${cookie_maxage}; HttpOnly${cookie_secure}`);
 				http.redirect(build_url(...resolved.ctx.request_path));

@@ -101,7 +101,9 @@
   })();
 </script>
 {%
-	let cookie_days = +(uci.get('luci', 'sauth', 'cookie_days') ?? 365);
+	let cookie_days = +(uci.get('luci', 'sauth', 'cookie_days') ?? 396);
+	if (cookie_days < 1)
+		cookie_days = 396;
 %}
 
 <script>
@@ -111,16 +113,37 @@
 	    MAX_AGE_DAYS = {{ cookie_days }},
 	    autoLogging = false;
 
+	function remember_encode(value) {
+		try {
+			return btoa(unescape(encodeURIComponent(value)));
+		}
+		catch (e) {
+			try { return btoa(value); } catch (e2) { return null; }
+		}
+	}
+
+	function remember_decode(value) {
+		try {
+			return decodeURIComponent(escape(atob(value)));
+		}
+		catch (e) {
+			try { return atob(value); } catch (e2) { return null; }
+		}
+	}
+
 	function remember_save(user, pass) {
 		if (autoLogging)
 			return;
 
 		try {
-			localStorage.setItem(STORAGE_KEY, JSON.stringify({
+			var encoded = remember_encode(JSON.stringify({
 				u: user,
 				p: pass,
 				e: Date.now() + MAX_AGE_DAYS * 86400000
 			}));
+
+			if (encoded)
+				localStorage.setItem(STORAGE_KEY, encoded);
 		}
 		catch (e) {}
 	}
@@ -132,7 +155,8 @@
 			if (!raw)
 				return null;
 
-			var cred = JSON.parse(raw);
+			var decoded = remember_decode(raw),
+			    cred = decoded ? JSON.parse(decoded) : null;
 
 			if (!cred || !cred.u || !cred.p || cred.e < Date.now()) {
 				localStorage.removeItem(STORAGE_KEY);
@@ -174,20 +198,6 @@
 		window.lr_tried = true;
 	{% endif %}
 
-	var form = document.querySelector('form[method="post"]');
-
-	if (form) {
-		form.addEventListener('submit', function(ev) {
-			var user = form.querySelector('[name="luci_username"]'),
-			    pass = form.querySelector('[name="luci_password"]');
-
-			if (user && pass && user.value && pass.value)
-				remember_save(user.value, pass.value);
-		});
-
-		remember_autofill(form);
-	}
-
 	var luci_submit = HTMLFormElement.prototype.submit;
 
 	HTMLFormElement.prototype.submit = function() {
@@ -199,6 +209,20 @@
 
 		return luci_submit.apply(this, arguments);
 	};
+
+	var form = document.querySelector('form[method="post"]');
+
+	if (form) {
+		form.addEventListener('submit', function() {
+			var user = form.querySelector('[name="luci_username"]'),
+			    pass = form.querySelector('[name="luci_password"]');
+
+			if (user && pass && user.value && pass.value)
+				remember_save(user.value, pass.value);
+		});
+
+		remember_autofill(form);
+	}
 })();
 </script>
 

@@ -94,7 +94,18 @@ return view.extend({
 			return node;
 		};
 
-		return m.render();
+		/* 读取现有 cookie_days，避免页面始终显示构建时的默认值。 */
+		return callUciGet('luci', 'sauth', 'cookie_days').then(function(result) {
+			var configured = result && result.value != null ? result.value : result,
+				days = parseInt(configured, 10);
+
+			if (!isNaN(days) && days >= 1 && days <= 3650)
+				formData.loginDays = days;
+
+			return m.render();
+		}).catch(function() {
+			return m.render();
+		});
 	},
 
 	handleSave: function() {
