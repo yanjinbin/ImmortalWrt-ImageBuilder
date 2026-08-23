@@ -196,11 +196,9 @@ permissions:
   contents: write
 
 jobs:
-  # fork 插件不再在此仓库用 SDK 编译, 统一使用各 fork 仓库自己的 prebuilt release
-  # (release 标签带 commit hash, 资产为固定名称的 tarball):
-  #   yanjinbin/OpenWrt-nikki          -> nikki-aarch64_generic-openwrt-25.12.tar.gz
-  #   yanjinbin/uniwrt-luci            -> luci-theme-uniwrt-aarch64_generic-openwrt-25.12.tar.gz
-  #   yanjinbin/luci-theme-footstrap   -> luci-theme-footstrap-aarch64_generic-openwrt-25.12.tar.gz
+  # fork 插件不再在此仓库用 SDK 编译, 统一使用各 fork 仓库自己的 prebuilt release。
+  # 资产名会随包管理器/构建方式变化（tar.gz 或直接 apk），下载步骤通过 Release API
+  # 按架构和 OpenWrt 版本选择资产，而不是依赖某一个历史文件名。
   # 版本输入支持 latest 或指定 release tag; mihomo 由主 job 直接下载 MetaCubeX 预编译二进制
   build:
     runs-on: ubuntu-22.04
@@ -237,28 +235,86 @@ jobs:
           mkdir -p "${{ github.workspace }}/fork-packages"
 
           fetch_release() {
-            local repo="$1" version="$2" asset="$3" dest="$4"
-            local url
+            local repo="$1" version="$2" asset_pattern="$3" expected_ext="$4" dest="$5"
+            local api_url release_json tag asset url
+
             if [ "$version" = "latest" ]; then
-              url="https://github.com/${repo}/releases/latest/download/${asset}"
+              api_url="https://api.github.com/repos/${repo}/releases/latest"
             else
-              url="https://github.com/${repo}/releases/download/${version}/${asset}"
+              api_url="https://api.github.com/repos/${repo}/releases/tags/${version}"
             fi
-            echo "下载: ${url}"
+
+            echo "查询 Release: ${api_url}"
+            release_json="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 20 \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'Authorization: Bearer ${{ github.token }}' "$api_url")"
+            tag="$(jq -r '.tag_name // empty' <<<"$release_json")"
+            asset="$(jq -r --arg pattern "$asset_pattern" \
+              '[.assets[] | select(.name | test($pattern))] | .[0].name // empty' <<<"$release_json")"
+            if [ -z "$tag" ] || [ -z "$asset" ]; then
+              echo "错误: ${repo} ${version} 没有匹配资产: ${asset_pattern}" >&2
+              echo "可用资产:" >&2
+              jq -r '.assets[]?.name' <<<"$release_json" >&2
+              exit 1
+            fi
+
+            url="https://github.com/${repo}/releases/download/${tag}/${asset}"
+            echo "下载 ${repo} ${tag}: ${asset}"
             curl -fL --retry 3 --retry-all-errors --connect-timeout 20 -o "/tmp/${dest}" "${url}"
             [ -s "/tmp/${dest}" ] || { echo "错误: ${asset} 下载失败"; exit 1; }
+            printf '%s\n' "$tag" > "/tmp/${dest}.tag"
+
+            rm -rf "/tmp/${dest}.d"
             mkdir -p "/tmp/${dest}.d"
-            tar -xzf "/tmp/${dest}" -C "/tmp/${dest}.d"
-            find "/tmp/${dest}.d" -type f -name '*.apk' -exec cp -v {} "${{ github.workspace }}/fork-packages/" \;
+            case "$asset" in
+              *.tar.gz)
+                tar -xzf "/tmp/${dest}" -C "/tmp/${dest}.d"
+                ;;
+              *.apk)
+                [ "$expected_ext" = "apk" ] || {
+                  echo "错误: ${repo} 资产是 APK, 但当前构建要求 .${expected_ext}" >&2
+                  exit 1
+                }
+                cp -v "/tmp/${dest}" "/tmp/${dest}.d/${asset}"
+                ;;
+              *)
+                echo "错误: 不支持的插件资产格式: ${asset}" >&2
+                exit 1
+                ;;
+            esac
+
+            # 25.12 使用 apk。拒绝同一个 Release 压缩包里混入的另一种包格式，
+            # 避免 ImageBuilder 静默拿到不兼容的 ipk。
+            wrong_ext="ipk"
+            [ "$expected_ext" = "ipk" ] && wrong_ext="apk"
+            if find "/tmp/${dest}.d" -type f -name "*.${wrong_ext}" -print -quit | grep -q .; then
+              echo "错误: ${repo} Release 同时包含 .${expected_ext} 和 .${wrong_ext}, 拒绝混用" >&2
+              exit 1
+            fi
+            found=0
+            while IFS= read -r package; do
+              cp -v "$package" "${{ github.workspace }}/fork-packages/"
+              found=1
+            done < <(find "/tmp/${dest}.d" -type f -name "*.${expected_ext}")
+            [ "$found" -eq 1 ] || {
+              echo "错误: ${repo} Release 没有可用的 .${expected_ext} 软件包" >&2
+              exit 1
+            }
           }
 
-          fetch_release yanjinbin/OpenWrt-nikki "${{ inputs.nikki_version }}" nikki-aarch64_generic-openwrt-25.12.tar.gz nikki.tar.gz
-          fetch_release yanjinbin/uniwrt-luci "${{ inputs.uniwrt_version }}" luci-theme-uniwrt-aarch64_generic-openwrt-25.12.tar.gz uniwrt.tar.gz
-          fetch_release yanjinbin/luci-theme-footstrap "${{ inputs.footstrap_version }}" luci-theme-footstrap-aarch64_generic-openwrt-25.12.tar.gz footstrap.tar.gz
+          fetch_release yanjinbin/OpenWrt-nikki "${{ inputs.nikki_version }}" \
+            '^nikki-aarch64_generic-openwrt-25\.12.*\.tar\.gz$' apk nikki.tar.gz
+          fetch_release yanjinbin/uniwrt-luci "${{ inputs.uniwrt_version }}" \
+            '^(luci-theme-uniwrt-aarch64_generic-openwrt-25\.12.*\.tar\.gz|luci-theme-uniwrt-.*\.apk)$' apk uniwrt.pkg
+          fetch_release yanjinbin/luci-theme-footstrap "${{ inputs.footstrap_version }}" \
+            '^(luci-theme-footstrap-aarch64_generic-openwrt-25\.12.*\.tar\.gz|luci-theme-footstrap-.*\.apk)$' apk footstrap.pkg
 
-          NIKKI_COMMIT="$(cat /tmp/nikki.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7)"
-          UNIWRT_COMMIT="$(cat /tmp/uniwrt.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7)"
-          FOOTSTRAP_COMMIT="$(cat /tmp/footstrap.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7)"
+          NIKKI_COMMIT="$(cat /tmp/nikki.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7 || true)"
+          UNIWRT_COMMIT="$(cat /tmp/uniwrt.pkg.d/commit.txt 2>/dev/null | cut -c1-7 || true)"
+          FOOTSTRAP_COMMIT="$(cat /tmp/footstrap.pkg.d/commit.txt 2>/dev/null | cut -c1-7 || true)"
+          [ -n "$NIKKI_COMMIT" ] || NIKKI_COMMIT="$(cat /tmp/nikki.tar.gz.tag)"
+          [ -n "$UNIWRT_COMMIT" ] || UNIWRT_COMMIT="$(cat /tmp/uniwrt.pkg.tag)"
+          [ -n "$FOOTSTRAP_COMMIT" ] || FOOTSTRAP_COMMIT="$(cat /tmp/footstrap.pkg.tag)"
           NIKKI_VER="$(find "${{ github.workspace }}/fork-packages" -maxdepth 1 -name 'nikki-*.apk' -exec basename {} \; 2>/dev/null | sed -nE 's/.*nikki-([^/]*)\.apk/\1/p' | head -1)"
           LUCI_NIKKI_VER="$(find "${{ github.workspace }}/fork-packages" -maxdepth 1 -name 'luci-app-nikki-*.apk' -exec basename {} \; 2>/dev/null | sed -nE 's/.*nikki-([^/]*)\.apk/\1/p' | head -1)"
           echo "NIKKI_COMMIT=${NIKKI_COMMIT:-latest}" >> "$GITHUB_ENV"
