@@ -37,7 +37,7 @@ fi
 
 # 检查配置文件ipv6-settings是否存在 该文件由build.sh动态生成
 IPV6_SETTINGS_FILE="/etc/config/ipv6-settings"
-enable_ipv6="yes"
+enable_ipv6="no"
 if [ -f "$IPV6_SETTINGS_FILE" ]; then
     . "$IPV6_SETTINGS_FILE"
 fi
@@ -207,7 +207,7 @@ elif [ "$count" -gt 1 ]; then
     uci commit network
 fi
 
-# 4. 是否关闭 IPv6 (由工作流 enable_ipv6 控制, 默认开启)
+# 4. 是否关闭 IPv6 (由工作流 enable_ipv6 控制, 默认关闭)
 echo "enable_ipv6 value: $enable_ipv6" >>$LOGFILE
 if [ "$enable_ipv6" = "no" ]; then
     # 关闭 WAN6 / LAN6 接口

@@ -521,7 +521,7 @@ on:
         description: |
           是否开启 IPv6 (WAN6 DHCPv6 / LAN RA / IPv6 防火墙)
         required: true
-        default: 'yes'
+        default: 'no'
         type: choice
         options:
           - 'yes'
