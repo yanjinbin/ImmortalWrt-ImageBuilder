@@ -10,6 +10,11 @@ on:
         options:
           - 25.12.0
           - 25.12.1
+      login_days:
+        description: "LuCI 登录时长（天），默认 396；rpcd 会话固定 7 天"
+        required: true
+        default: 396
+        type: number
       profile:
         type: choice
         description: |
@@ -435,6 +440,7 @@ jobs:
               -e INCLUDE_DOCKER=$include_docker \
               -e INCLUDE_GEOX="${{ inputs.include_geox }}" \
               -e BUILD_COMMIT="${{ github.sha }}" \
+              -e LOGIN_DAYS="${{ inputs.login_days }}" \
               -e ROOTFS_PARTSIZE=$ROOTFS_SIZE \
               -e ENABLE_PPPOE="$enable_pppoe" \
               -e PPPOE_ACCOUNT="$pppoe_account" \
@@ -478,6 +484,7 @@ jobs:
             echo "- ImmortalWrt 版本: ${{ inputs.luci_version }}"
             echo "- 设备: $DEV ($PROFILE)"
             echo "- LAN 管理地址: ${{ inputs.custom_router_ip }}"
+            echo "- LuCI 登录时长: ${{ inputs.login_days }} 天 (rpcd sessiontime 固定 7 天)"
             echo "- 登录用户名: root"
             echo "- 登录密码: 666666"
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"

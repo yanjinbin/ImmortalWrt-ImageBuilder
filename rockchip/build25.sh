@@ -9,6 +9,23 @@ echo "Building for profile: $PROFILE"
 # yml 传入的固件大小 ROOTFS_PARTSIZE
 echo "Building for ROOTFS_PARTSIZE: $ROOTFS_PARTSIZE"
 
+# 编译时预置 LuCI 登录 Cookie/localStorage 时长；rpcd sessiontime 仍由
+# files/etc/uci-defaults/98-luci-sauth.sh 固定为 604800 秒。
+LOGIN_DAYS="${LOGIN_DAYS:-396}"
+case "$LOGIN_DAYS" in
+    ''|*[!0-9]*)
+        echo "错误: LOGIN_DAYS 必须是正整数 (1-3650), 当前: $LOGIN_DAYS"
+        exit 1
+        ;;
+esac
+if (( LOGIN_DAYS < 1 || LOGIN_DAYS > 3650 )); then
+    echo "错误: LOGIN_DAYS 必须在 1-3650 之间, 当前: $LOGIN_DAYS"
+    exit 1
+fi
+mkdir -p /home/build/immortalwrt/files/etc
+printf '%s\n' "$LOGIN_DAYS" > /home/build/immortalwrt/files/etc/luci-login-days
+echo "LuCI 登录时长预置为 ${LOGIN_DAYS} 天"
+
 echo "Create pppoe-settings"
 mkdir -p  /home/build/immortalwrt/files/etc/config
 
