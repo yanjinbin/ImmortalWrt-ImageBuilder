@@ -98,12 +98,12 @@ on:
           - "192.168.31.1"
           - "10.0.0.1"
       mihomo_version:
-        description: "mihomo 版本 (默认 1.19.27, 可选 latest 最新版; 选 custom 时填写下方自定义版本)"
+        description: "mihomo 版本 (默认 1.19.32, 可选 latest 最新版; 选 custom 时填写下方自定义版本)"
         required: true
         type: choice
-        default: "1.19.27"
+        default: "1.19.32"
         options:
-          - "1.19.27"
+          - "1.19.32"
           - "latest"
           - "1.19.29"
           - "1.19.28"
@@ -512,7 +512,7 @@ jobs:
             echo "## 🧩 已集成插件/主题"
             echo "- 代理: nikki ($NIKKI_VER) @ $NIKKI_COMMIT + luci-app-nikki ($LUCI_NIKKI_VER) + mihomo (MetaCubeX 预编译) (fork 魔改: 批量上传/重载清连接)"
             echo "- 代理: Momo v1.2.1 (官方 APK) + sing-box (ImmortalWrt 软件源)，默认关闭；与 Nikki 按需择一启用"
-            echo "- 游戏加速: luci-app-uugamebooster 1.1-r1 (lmq8267 官方 APK)，默认关闭；启用时下载网易 UU 二进制"
+            echo "- 游戏加速: luci-app-uugamebooster 1.1-r2 (lmq8267 官方 APK，修复离线安装脚本)，默认关闭；启用时下载网易 UU 二进制"
             if [ "${{ inputs.include_geox }}" = "yes" ]; then
               echo "- 代理数据: 内置 geoip.dat / geosite.dat / country.mmdb (构建时原生直连下载)"
             else

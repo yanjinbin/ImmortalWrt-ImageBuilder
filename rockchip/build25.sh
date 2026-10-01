@@ -72,6 +72,7 @@ rm -f /home/build/immortalwrt/packages/bandix-plus-*.apk \
 
 # 使用工作流校验的 Momo 和 UU 官方包，避免第三方仓库中的同名包覆盖。
 rm -f /home/build/immortalwrt/packages/momo-*.apk \
+      /home/build/immortalwrt/packages/sing-box-*.apk \
       /home/build/immortalwrt/packages/luci-app-momo-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-momo-*.apk \
       /home/build/immortalwrt/packages/luci-app-uugamebooster-*.apk
@@ -86,6 +87,13 @@ if [ -d /home/build/immortalwrt/fork-packages ]; then
 else
     echo "⚠️ 未挂载 fork-packages 目录, 跳过 fork 插件导入"
 fi
+
+# UU 1.1 的安装脚本未使用 IPKG_INSTROOT，修复后重新打包供离线安装。
+python3 shell/repair-uugamebooster.py \
+    /home/build/immortalwrt/staging_dir/host/bin/apk \
+    /home/build/immortalwrt/packages/luci-app-uugamebooster-1.1-r1.apk \
+    /home/build/immortalwrt/packages/luci-app-uugamebooster-1.1-r2.apk || exit 1
+rm -f /home/build/immortalwrt/packages/luci-app-uugamebooster-1.1-r1.apk
 
 # ============= 内置 geox 数据集 (geoip/geosite/mmdb, 给 nikki/mihomo 首次启动免下载) =============
 # 是否内置由 workflow 的 INCLUDE_GEOX 控制 (默认 yes);
