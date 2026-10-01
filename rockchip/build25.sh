@@ -70,6 +70,12 @@ rm -f /home/build/immortalwrt/packages/bandix-plus-*.apk \
       /home/build/immortalwrt/packages/luci-app-bandix-plus-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-bandix-plus-*.apk
 
+# 使用工作流校验的 Momo 和 UU 官方包，避免第三方仓库中的同名包覆盖。
+rm -f /home/build/immortalwrt/packages/momo-*.apk \
+      /home/build/immortalwrt/packages/luci-app-momo-*.apk \
+      /home/build/immortalwrt/packages/luci-i18n-momo-*.apk \
+      /home/build/immortalwrt/packages/luci-app-uugamebooster-*.apk
+
 # 导入 GitHub Actions 准备的 APK（SDK 编译的 fork 插件 + 已校验的 Bandix Plus 官方包）
 if [ -d /home/build/immortalwrt/fork-packages ]; then
     echo "✅ 正在导入 Actions 准备的第三方 APK..."
@@ -139,6 +145,10 @@ PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
 PACKAGES="$PACKAGES collectd-mod-cpu collectd-mod-memory collectd-mod-load collectd-mod-interface collectd-mod-df collectd-mod-sensors"
 # ============= nikki 代理 (fork 自编译; mihomo 由工作流直接下载 MetaCubeX 预编译二进制) =============
 PACKAGES="$PACKAGES nikki luci-app-nikki luci-i18n-nikki-zh-cn"
+# Momo 和 UU 保留上游默认关闭配置，启用时由用户选择。
+PACKAGES="$PACKAGES momo luci-app-momo luci-i18n-momo-zh-cn sing-box"
+# UU 的 APK 未声明运行时所需的 tun 模块，显式补齐。
+PACKAGES="$PACKAGES luci-app-uugamebooster luci-compat kmod-tun"
 # ======== shell/custom-packages.sh =======
 # 合并imm仓库以外的第三方插件
 PACKAGES="$PACKAGES $CUSTOM_PACKAGES"
