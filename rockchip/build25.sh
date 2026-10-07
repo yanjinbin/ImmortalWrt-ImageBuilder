@@ -152,6 +152,8 @@ PACKAGES="$PACKAGES nikki luci-app-nikki luci-i18n-nikki-zh-cn"
 PACKAGES="$PACKAGES momo luci-app-momo luci-i18n-momo-zh-cn sing-box"
 # UU 的 APK 未声明运行时所需的 tun 模块，显式补齐。
 PACKAGES="$PACKAGES luci-app-uugamebooster luci-compat kmod-tun"
+# BBR 拥塞控制内核模块 (R5C/E20C 等 ARM 软路由网络优化, 由 97-sysctl-network.sh 启用)
+PACKAGES="$PACKAGES kmod-tcp-bbr"
 # ======== shell/custom-packages.sh =======
 # 合并imm仓库以外的第三方插件
 PACKAGES="$PACKAGES $CUSTOM_PACKAGES"
