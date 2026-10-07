@@ -103,9 +103,9 @@
 </script>
 
 {%
-	let cookie_days = +(uci.get('luci', 'sauth', 'cookie_days') ?? 396);
+	let cookie_days = +(uci.get('luci', 'sauth', 'cookie_days') ?? 365);
 	if (cookie_days < 1)
-		cookie_days = 396;
+		cookie_days = 365;
 %}
 
 <script>

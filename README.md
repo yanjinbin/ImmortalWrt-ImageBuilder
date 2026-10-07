@@ -37,20 +37,21 @@
 **E20C 网口指示灯**：首启自动为 RTL8168H/8111H WAN RJ45 网口配置 10/100/1000M 链路和 RX/TX 活动指示，不影响机身 WAN/LAN 指示灯。
 
 **已集成插件/主题**：
-- 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork 的 prebuilt release，构建时可选 latest 或指定 release tag，含魔改内容）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
+- 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，默认固定为 `prebuilt-aarch64-25.12-fda14bf`，支持按星期和时间更新订阅、代理组定时切换；也可选择 latest 或其他 release tag）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 代理：Momo v1.2.1（`nikkinikki-org/OpenWrt-momo` 官方 25.12 APK）+ sing-box（ImmortalWrt 软件源），默认关闭，与 Nikki 按需择一启用
 - 游戏加速：luci-app-uugamebooster 1.1-r2（`lmq8267/luci-app-uugamebooster` 官方 APK，构建时修复离线安装脚本），默认关闭，启用时从网易下载 UU 二进制；已补齐 luci-compat 与 kmod-tun
 - 主题：luci-theme-openwrt（官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（默认，`yanjinbin/luci-theme-footstrap`）；已移除 argon
 - 默认主机名：ImmortalWrt-<软路由型号>-Gateway（如 E20C → `ImmortalWrt-E20C-Gateway`、NanoPi-R5C → `ImmortalWrt-NanoPi-R5C-Gateway`），首启按板型自动设置
 - 默认登录密码：`666666`（LuCI 系统->管理权 可修改）
-- LuCI 登录时长：默认 396 天（`luci.sauth.cookie_days=396`，rpcd `sessiontime` 固定 604800 不放大；cookie + localStorage 双保险，覆盖通用/OpenWrt/uniwrt/footstrap/bootstrap 主题；密码页"登录时长（天）/ Login duration (days)"支持中英文显示）
+- LuCI 登录时长：默认 365 天（`luci.sauth.cookie_days=365`，rpcd `sessiontime` 固定 604800 不放大；cookie + localStorage 双保险，覆盖通用/OpenWrt/uniwrt/footstrap/bootstrap 主题；密码页"登录时长（天）/ Login duration (days)"支持中英文显示）
 - 默认主题：Footstrap（`luci.main.mediaurlbase=/luci-static/footstrap`）
 - 壁纸：Footstrap 包含 Cats / Dinos 两套内置壁纸，默认未启用；可在 Appearance → Wallpaper 中选择，并通过 Save as default 保存为路由器默认设置
 - 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库），默认预装 collectd 常用模块：CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度（CPU/GPU 温度，自动带 lm-sensors），首启自动启用
-- 流量监控：luci-app-bandix（基础版）+ luci-app-bandix-plus（多接口版）；Plus 后端、前端和中文包均使用 timsaya 官方 Release APK 并校验 SHA-256
 - 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）
 
 **默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.1.1`，可选 `192.168.100.1` 等），仅对多网口机型生效。
+
+**PPPoE 模式**：Rockchip 工作流选择 `enable_pppoe=yes` 时，可以同时留空账号和密码，只预设 PPPoE 模式。刷机后填写拨号信息或恢复网络配置；空白构建凭据不会覆盖已有拨号账号密码。若填写凭据，必须同时填写两项，且会写入公开发布的固件。
 
 **全平台 IPv6 开关**：所有构建工作流（x86-64、Rockchip、MediaTek 无线路由器、Sunxi 全志、树莓派 Raspberry Pi、QEMU、斐讯 N1、ISO 安装器）UI 中均已支持 `enable_ipv6` 参数：
 - `no`（默认，纯 IPv4 模式）：在固件首次开机时于运行时配置层面彻底关闭 IPv6（将 WAN6 协议置为 `none`、禁用 LAN 口 RA 与 DHCPv6 分配、停止并禁用 `odhcpd` 服务、防火墙开启 `disable_ipv6=1` 屏蔽 IPv6 流量）；**同时固件镜像中完整保留所有 IPv6 相关软件包（不卸载）**，便于用户日后在 LuCI Web 界面按需重新开启。

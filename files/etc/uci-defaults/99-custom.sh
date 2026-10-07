@@ -194,8 +194,10 @@ elif [ "$count" -gt 1 ]; then
     if [ "$enable_pppoe" = "yes" ]; then
         echo "PPPoE enabled, configuring..." >>$LOGFILE
         uci set network.wan.proto='pppoe'
-        uci set network.wan.username="$pppoe_account"
-        uci set network.wan.password="$pppoe_password"
+        if [ -n "$pppoe_account" ] && [ -n "$pppoe_password" ]; then
+            uci set network.wan.username="$pppoe_account"
+            uci set network.wan.password="$pppoe_password"
+        fi
         uci set network.wan.peerdns='1'
         uci set network.wan.auto='1'
         uci set network.wan6.proto='none'

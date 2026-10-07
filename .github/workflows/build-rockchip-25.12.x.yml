@@ -12,9 +12,9 @@ on:
           - 25.12.1
           - 25.12.2
       login_days:
-        description: "LuCI 登录时长（天），默认 396；rpcd 会话固定 7 天"
+        description: "LuCI 登录时长（天），默认 365；rpcd 会话固定 7 天"
         required: true
-        default: 396
+        default: 365
         type: number
       profile:
         type: choice
@@ -151,7 +151,7 @@ on:
           - 'yes'
           - 'no'
       enable_pppoe:
-        description: "是否配置PPPoE拨号信息?"
+        description: "是否启用 PPPoE 模式（账号密码可留空，刷机后填写）?"
         required: true
         default: 'no'
         type: choice
@@ -159,7 +159,7 @@ on:
         - 'yes'
         - 'no'
       pppoe_account:
-        description: "宽带账号 (若启用PPPoE)"
+        description: "宽带账号（可选；留空时不内置拨号凭据）"
         required: false
       pppoe_password:
         description: "宽带密码 (若启用PPPoE)"
@@ -178,9 +178,9 @@ on:
         required: false
         default: ""
       nikki_version:
-        description: "OpenWrt-nikki 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-6b4e263)"
+        description: "OpenWrt-nikki 预编译 release: latest 或指定 release tag"
         required: false
-        default: "latest"
+        default: "prebuilt-aarch64-25.12-fda14bf"
       uniwrt_version:
         description: "uniwrt-luci 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-adef3c1)"
         required: false
@@ -229,9 +229,13 @@ jobs:
           pppoe_account=$(jq -r '.inputs.pppoe_account // ""' "$GITHUB_EVENT_PATH")
           pppoe_password=$(jq -r '.inputs.pppoe_password // ""' "$GITHUB_EVENT_PATH")
           if [[ "$enable_pppoe" == "yes" ]]; then
-            if [[ -z "$pppoe_account" || -z "$pppoe_password" ]]; then
-              echo "Error: PPPoE account and password must be provided when PPPoE is enabled!"
+            if [[ -n "$pppoe_account" && -z "$pppoe_password" ]] || \
+               [[ -z "$pppoe_account" && -n "$pppoe_password" ]]; then
+              echo "Error: Set both PPPoE credentials, or leave both empty for mode-only firmware."
               exit 1
+            fi
+            if [[ -z "$pppoe_account" ]]; then
+              echo "PPPoE mode enabled without embedded credentials."
             fi
           fi
 
@@ -341,40 +345,6 @@ jobs:
           echo "✅ nikki @ ${NIKKI_COMMIT:-latest} / uniwrt @ ${UNIWRT_COMMIT:-latest} / footstrap @ ${FOOTSTRAP_COMMIT:-latest}"
           ls -lah "${{ github.workspace }}/fork-packages/"
 
-      - name: 下载 Bandix Plus 官方 APK
-        run: |
-          set -euo pipefail
-
-          DEST="${{ github.workspace }}/fork-packages/bandix-plus"
-          mkdir -p "$DEST"
-
-          download_apk() {
-            local url="$1"
-            local output="$2"
-            local sha256="$3"
-
-            echo "下载: $url"
-            curl -fL --retry 3 --retry-all-errors --connect-timeout 20 -o "$output" "$url"
-            printf '%s  %s\n' "$sha256" "$output" | sha256sum -c -
-          }
-
-          # ImageBuilder 本地 APK 索引按「包名-版本.apk」取文件，不能保留 Release 的架构后缀。
-          download_apk \
-            "https://github.com/timsaya/openwrt-bandix-plus/releases/download/v0.1.2/bandix-plus-0.1.2-r1_aarch64_generic.apk" \
-            "$DEST/bandix-plus-0.1.2-r1.apk" \
-            "91b7d3f7a27788d5708c5d3d1b0a933a8bfbafec4a8f82fb59f0aaacb567c197"
-          download_apk \
-            "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r1/luci-app-bandix-plus-0.1.3-r1_all.apk" \
-            "$DEST/luci-app-bandix-plus-0.1.3-r1.apk" \
-            "d3af8ea19cbd7e15ed79f548404bd59f969bbeacc5abb391a3003b5cfe8691eb"
-          download_apk \
-            "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r1/luci-i18n-bandix-plus-zh-cn-26.211.58145.105dcec_all.apk" \
-            "$DEST/luci-i18n-bandix-plus-zh-cn-26.211.58145~105dcec.apk" \
-            "2d52caf4bcf6b8e87778a3d5cb35a47530892b10272a6554df30f67f8afa0ab3"
-
-          echo "✅ 已导入 Bandix Plus 官方 APK:"
-          ls -lah "$DEST"
-
       - name: 下载 mihomo 预编译二进制 (MetaCubeX releases, 不自行编译)
         run: |
           set -euo pipefail
@@ -460,6 +430,27 @@ jobs:
           immortalwrt/imagebuilder:rockchip-armv8-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
         
     
+      - name: 校验固件软件包和 PPPoE 预设
+        run: |
+          set -euo pipefail
+          mapfile -t manifests < <(find bin/targets/rockchip/armv8 -maxdepth 1 -name '*.manifest')
+          [ "${#manifests[@]}" -gt 0 ] || { echo "错误: 未生成固件软件包清单"; exit 1; }
+          for manifest in "${manifests[@]}"; do
+            grep -q '^nikki - ' "$manifest"
+            grep -q '^luci-app-nikki - ' "$manifest"
+            if grep -qi 'bandix' "$manifest"; then
+              echo "错误: 固件仍包含 Bandix 软件包"
+              exit 1
+            fi
+          done
+          if jq -e '.inputs.enable_pppoe == "yes" and (.inputs.pppoe_account // "") == ""' \
+            "$GITHUB_EVENT_PATH" >/dev/null; then
+            grep -qx 'enable_pppoe=yes' custom/pppoe-settings
+            grep -qx 'pppoe_account=' custom/pppoe-settings
+            grep -qx 'pppoe_password=' custom/pppoe-settings
+          fi
+          echo "已确认固件包含 Nikki、不含 Bandix，PPPoE 预设与输入一致。"
+
       - name: 生成动态 Release 说明
         run: |
           set -euo pipefail
@@ -501,6 +492,10 @@ jobs:
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
             echo "- PPPoE: ${{ inputs.enable_pppoe }}"
+            if [[ "${{ inputs.enable_pppoe }}" == "yes" ]] && \
+               [[ -z "$(jq -r '.inputs.pppoe_account // ""' "$GITHUB_EVENT_PATH")" ]]; then
+              echo "- PPPoE 凭据: 未内置；刷机后填写账号密码或恢复网络配置"
+            fi
             echo "- IPv6: ${{ inputs.enable_ipv6 }}"
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
             if [ -n "${{ inputs.remark }}" ]; then
@@ -510,7 +505,7 @@ jobs:
             fi
             echo ""
             echo "## 🧩 已集成插件/主题"
-            echo "- 代理: nikki ($NIKKI_VER) @ $NIKKI_COMMIT + luci-app-nikki ($LUCI_NIKKI_VER) + mihomo (MetaCubeX 预编译) (fork 魔改: 批量上传/重载清连接)"
+            echo "- 代理: nikki ($NIKKI_VER) @ $NIKKI_COMMIT + luci-app-nikki ($LUCI_NIKKI_VER) + mihomo (MetaCubeX 预编译) (fork 魔改: 按星期和时间更新订阅/代理组定时切换/批量上传/重载清连接)"
             echo "- 代理: Momo v1.2.1 (官方 APK) + sing-box (ImmortalWrt 软件源)，默认关闭；与 Nikki 按需择一启用"
             echo "- 游戏加速: luci-app-uugamebooster 1.1-r2 (lmq8267 官方 APK，修复离线安装脚本)，默认关闭；启用时下载网易 UU 二进制"
             if [ "${{ inputs.include_geox }}" = "yes" ]; then
@@ -521,7 +516,7 @@ jobs:
             echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT / luci-theme-openwrt (imm 官方)"
             echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }}"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
-            echo "- 监控/扩容: luci-app-bandix / luci-app-bandix-plus / luci-app-partexp"
+            echo "- 扩容: luci-app-partexp"
             echo ""
             echo "## 📦 固件文件"
             ls -lh "${{ github.workspace }}/bin/targets/rockchip/armv8/"*.img.gz 2>/dev/null \

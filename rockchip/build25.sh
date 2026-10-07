@@ -11,7 +11,7 @@ echo "Building for ROOTFS_PARTSIZE: $ROOTFS_PARTSIZE"
 
 # 编译时预置 LuCI 登录 Cookie/localStorage 时长；rpcd sessiontime 仍由
 # files/etc/uci-defaults/98-luci-sauth.sh 固定为 604800 秒。
-LOGIN_DAYS="${LOGIN_DAYS:-396}"
+LOGIN_DAYS="${LOGIN_DAYS:-365}"
 case "$LOGIN_DAYS" in
     ''|*[!0-9]*)
         echo "错误: LOGIN_DAYS 必须是正整数 (1-3650), 当前: $LOGIN_DAYS"
@@ -59,16 +59,11 @@ else
   ls -lah /home/build/immortalwrt/packages/
 fi
 
-# ============= Actions 准备的第三方 APK (fork 插件 + Bandix Plus 官方包) =============
+# ============= Actions 准备的第三方 APK =============
 # 移除 wukongdaily/apk 仓库中的上游 nikki 包, 避免与下方 fork 编译产物冲突
 rm -f /home/build/immortalwrt/packages/nikki-*.apk \
       /home/build/immortalwrt/packages/luci-app-nikki-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-nikki-*.apk
-
-# 移除第三方仓库中可能存在的 Bandix Plus 旧版本，使用工作流下载并校验的官方 APK
-rm -f /home/build/immortalwrt/packages/bandix-plus-*.apk \
-      /home/build/immortalwrt/packages/luci-app-bandix-plus-*.apk \
-      /home/build/immortalwrt/packages/luci-i18n-bandix-plus-*.apk
 
 # 使用工作流校验的 Momo 和 UU 官方包，避免第三方仓库中的同名包覆盖。
 rm -f /home/build/immortalwrt/packages/momo-*.apk \
@@ -77,7 +72,7 @@ rm -f /home/build/immortalwrt/packages/momo-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-momo-*.apk \
       /home/build/immortalwrt/packages/luci-app-uugamebooster-*.apk
 
-# 导入 GitHub Actions 准备的 APK（SDK 编译的 fork 插件 + 已校验的 Bandix Plus 官方包）
+# 导入 GitHub Actions 准备的 APK（SDK 编译的 fork 插件和已校验的官方包）
 if [ -d /home/build/immortalwrt/fork-packages ]; then
     echo "✅ 正在导入 Actions 准备的第三方 APK..."
     # upload-artifact 会保留 bin/packages/... 嵌套路径, 递归查找所有 apk 再拷贝
