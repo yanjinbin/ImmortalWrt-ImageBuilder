@@ -16,7 +16,7 @@
 | luci-theme-kucat      | 酷猫主题                  | [sirpdboy/luci-theme-kucat](https://github.com/sirpdboy/luci-theme-kucat)                 |
 | luci-app-mosdns                | 高性能 DNS 分流器，支持 DoH/DoQ 等         | [sbwml/luci-app-mosdns](https://github.com/sbwml/luci-app-mosdns)                     |
 | luci-app-nekobox               | 代理工具      | [Thaolga/luci-app-nekobox](https://github.com/Thaolga/openwrt-nekobox)       |
-| luci-app-nikki                 | 代理工具 (fork prebuilt release; nikki 2026.04.08-r2 / luci-app-nikki 1.26.1-r1 @ 6b4e263)   | [yanjinbin/OpenWrt-nikki](https://github.com/yanjinbin/OpenWrt-nikki) (含 mihomo-meta / nikki / luci-app-nikki) |
+| luci-app-nikki                 | 代理工具 (fork prebuilt release; nikki 2026.04.08-r1 / luci-app-nikki 1.26.1-r1 @ c20a547)   | [yanjinbin/OpenWrt-nikki](https://github.com/yanjinbin/OpenWrt-nikki) (nikki / luci-app-nikki；Mihomo 1.19.33 由工作流独立下载) |
 | luci-theme-uniwrt              | UniWRT 主题 (fork prebuilt release @ adef3c1) | [yanjinbin/uniwrt-luci](https://github.com/yanjinbin/uniwrt-luci)                                          |
 | luci-theme-footstrap           | Footstrap 主题 (fork prebuilt release @ eb24dd5) | [yanjinbin/luci-theme-footstrap](https://github.com/yanjinbin/luci-theme-footstrap)                     |
 | luci-theme-openwrt             | OpenWrt 官方主题 (imm 仓库内) | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |

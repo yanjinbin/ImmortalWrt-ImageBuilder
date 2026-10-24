@@ -98,11 +98,12 @@ on:
           - "192.168.31.1"
           - "10.0.0.1"
       mihomo_version:
-        description: "mihomo 版本 (默认 1.19.32, 可选 latest 最新版; 选 custom 时填写下方自定义版本)"
+        description: "mihomo 版本 (默认 1.19.33, 可选 latest 最新版; 选 custom 时填写下方自定义版本)"
         required: true
         type: choice
-        default: "1.19.32"
+        default: "1.19.33"
         options:
+          - "1.19.33"
           - "1.19.32"
           - "latest"
           - "1.19.29"
@@ -180,7 +181,7 @@ on:
       nikki_version:
         description: "OpenWrt-nikki 预编译 release: latest 或指定 release tag"
         required: false
-        default: "prebuilt-aarch64-25.12-fda14bf"
+        default: "prebuilt-aarch64-25.12-c20a547"
       uniwrt_version:
         description: "uniwrt-luci 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-adef3c1)"
         required: false

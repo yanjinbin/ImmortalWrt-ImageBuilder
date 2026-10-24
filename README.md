@@ -37,7 +37,7 @@
 **E20C 网口指示灯**：首启自动为 RTL8168H/8111H WAN RJ45 网口配置 10/100/1000M 链路和 RX/TX 活动指示，不影响机身 WAN/LAN 指示灯。
 
 **已集成插件/主题**：
-- 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，默认固定为 `prebuilt-aarch64-25.12-fda14bf`，支持按星期和时间更新订阅、代理组定时切换；也可选择 latest 或其他 release tag）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
+- 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，默认固定为 `prebuilt-aarch64-25.12-c20a547`，支持按星期和时间更新订阅、代理组定时切换；也可选择 latest 或其他 release tag）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 代理：Momo v1.2.1（`nikkinikki-org/OpenWrt-momo` 官方 25.12 APK）+ sing-box（ImmortalWrt 软件源），默认关闭，与 Nikki 按需择一启用
 - 游戏加速：luci-app-uugamebooster 1.1-r2（`lmq8267/luci-app-uugamebooster` 官方 APK，构建时修复离线安装脚本），默认关闭，启用时从网易下载 UU 二进制；已补齐 luci-compat 与 kmod-tun
 - 主题：luci-theme-openwrt（官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（默认，`yanjinbin/luci-theme-footstrap`）；已移除 argon
@@ -57,7 +57,7 @@
 - `no`（默认，纯 IPv4 模式）：在固件首次开机时于运行时配置层面彻底关闭 IPv6（将 WAN6 协议置为 `none`、禁用 LAN 口 RA 与 DHCPv6 分配、停止并禁用 `odhcpd` 服务、防火墙开启 `disable_ipv6=1` 屏蔽 IPv6 流量）；**同时固件镜像中完整保留所有 IPv6 相关软件包（不卸载）**，便于用户日后在 LuCI Web 界面按需重新开启。
 - `yes`：保留完整 IPv6 网络支持（WAN6 自动获取 DHCPv6、LAN 启用 RA 与 DHCPv6 服务、放行 IPv6 防火墙流量）。
 
-**mihomo 版本/平台**：工作流 UI 支持选择或填写 mihomo 版本（默认 `1.19.32`，可选 `latest` 最新版或自定义版本号）和平台（默认 `arm64`，覆盖 R5C / R6S / E20C；可选 `amd64`、`armv7` 等或自定义）。
+**mihomo 版本/平台**：工作流 UI 支持选择或填写 mihomo 版本（默认 `1.19.33`，可选 `latest` 最新版或自定义版本号）和平台（默认 `arm64`，覆盖 R5C / R6S / E20C；可选 `amd64`、`armv7` 等或自定义）。
 
 构建完成后固件自动发布到**独立 Release 页面**（每次构建单独 tag：`Autobuild-<run>`），说明内容按本次构建参数（设备 / LAN IP / mihomo 版本 / 固件空间等）动态生成，可直接下载 `*.img.gz`。
 
