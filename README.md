@@ -39,7 +39,7 @@
 **已集成插件/主题**：
 - 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，默认固定为 `prebuilt-aarch64-25.12-c20a547`，支持按星期和时间更新订阅、代理组定时切换；也可选择 latest 或其他 release tag）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 代理：Momo v1.2.1（`nikkinikki-org/OpenWrt-momo` 官方 25.12 APK）+ sing-box（ImmortalWrt 软件源），默认关闭，与 Nikki 按需择一启用
-- 游戏加速：luci-app-uugamebooster 1.1-r2（`lmq8267/luci-app-uugamebooster` 官方 APK，构建时修复离线安装脚本），默认关闭，启用时从网易下载 UU 二进制；已补齐 luci-compat 与 kmod-tun
+- 游戏加速：luci-app-uugamebooster 1.1-r2（`lmq8267` 原版 APK 已[归档到仓库](packages/README.md)，构建时校验 SHA256 并修复离线安装脚本），默认关闭，启用时从网易下载 UU 二进制；已补齐 luci-compat 与 kmod-tun
 - 主题：luci-theme-openwrt（官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（默认，`yanjinbin/luci-theme-footstrap`）；已移除 argon
 - 默认主机名：ImmortalWrt-<软路由型号>-Gateway（如 E20C → `ImmortalWrt-E20C-Gateway`、NanoPi-R5C → `ImmortalWrt-NanoPi-R5C-Gateway`），首启按板型自动设置
 - 默认登录密码：`666666`（LuCI 系统->管理权 可修改）

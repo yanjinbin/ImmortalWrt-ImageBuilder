@@ -326,9 +326,12 @@ jobs:
           fetch_release nikkinikki-org/OpenWrt-momo v1.2.1 \
             '^momo_aarch64_generic-openwrt-25\.12\.tar\.gz$' apk momo.tar.gz \
             3cea3caac426449805a586f5b79c1639b44c2ca121bd83f89cdcf95bcaa1fbba
-          fetch_release lmq8267/luci-app-uugamebooster 1.1 \
-            '^luci-app-uugamebooster-1\.1-r1\.apk$' apk uugamebooster.apk \
-            e63161f9cc178751a38a09a15d3fddf5d88724ee6deca98438efbdfcdc68c20e
+          # The upstream repository is unavailable; retain the verified original APK.
+          UU_PACKAGE="packages/luci-app-uugamebooster-1.1-r1.apk"
+          printf '%s  %s\n' \
+            e63161f9cc178751a38a09a15d3fddf5d88724ee6deca98438efbdfcdc68c20e \
+            "$UU_PACKAGE" | sha256sum -c -
+          cp "$UU_PACKAGE" "${{ github.workspace }}/fork-packages/"
 
           NIKKI_COMMIT="$(cat /tmp/nikki.tar.gz.d/commit.txt 2>/dev/null | cut -c1-7 || true)"
           UNIWRT_COMMIT="$(cat /tmp/uniwrt.pkg.d/commit.txt 2>/dev/null | cut -c1-7 || true)"
