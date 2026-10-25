@@ -154,6 +154,10 @@ PACKAGES="$PACKAGES momo luci-app-momo luci-i18n-momo-zh-cn sing-box"
 PACKAGES="$PACKAGES luci-app-uugamebooster luci-compat kmod-tun"
 # BBR 拥塞控制内核模块 (R5C/E20C 等 ARM 软路由网络优化, 由 97-sysctl-network.sh 启用)
 PACKAGES="$PACKAGES kmod-tcp-bbr"
+# ============= SQM 队列整形 (CAKE 抗 bufferbloat, 配置在 /etc/config/sqm) =============
+# sqm-scripts 需要 tc 与 cake/ifb 内核模块; 固件内预置, 保留配置刷机后自动生效
+PACKAGES="$PACKAGES sqm-scripts luci-app-sqm luci-i18n-sqm-zh-cn"
+PACKAGES="$PACKAGES tc-full kmod-sched-core kmod-sched-cake kmod-ifb"
 # ======== shell/custom-packages.sh =======
 # 合并imm仓库以外的第三方插件
 PACKAGES="$PACKAGES $CUSTOM_PACKAGES"
