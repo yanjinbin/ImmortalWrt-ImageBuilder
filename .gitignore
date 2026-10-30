@@ -1,0 +1,6 @@
+# Local firmware build output.
+/bin/
+
+# Python test cache.
+__pycache__/
+*.py[cod]
