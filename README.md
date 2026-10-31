@@ -47,6 +47,7 @@
 - 默认主题：Footstrap（`luci.main.mediaurlbase=/luci-static/footstrap`）
 - 壁纸：Footstrap 包含 Cats / Dinos 两套内置壁纸，默认未启用；可在 Appearance → Wallpaper 中选择，并通过 Save as default 保存为路由器默认设置
 - 流量统计：luci-app-statistics + luci-i18n-statistics-zh-cn（官方仓库），默认预装 collectd 常用模块：CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度（CPU/GPU 温度，自动带 lm-sensors），首启自动启用
+- 流量监控：luci-app-bandix-plus（多接口版，后端、前端和中文包均使用 timsaya 官方 Release APK 并校验 SHA-256）
 - 分区扩容：luci-app-partexp（sirpdboy，wukongdaily/apk 源）
 
 **默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.1.1`，可选 `192.168.100.1` 等），仅对多网口机型生效。

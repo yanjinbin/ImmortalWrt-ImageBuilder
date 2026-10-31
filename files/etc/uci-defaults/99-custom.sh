@@ -252,6 +252,30 @@ uci delete ttyd.@ttyd[0].interface
 uci set dropbear.@dropbear[0].Interface=''
 uci commit
 
+# 适配 Bandix Plus 流量监控 (针对 E20C / R5C 等多网口软路由，自动配置同时监控 LAN 与 WAN)
+configure_bandix_plus() {
+    [ -x /etc/init.d/bandix-plus ] || [ -f /etc/config/bandix_plus ] || return 0
+
+    if [ -f /etc/config/bandix_plus ]; then
+        uci -q delete bandix_plus.general.iface
+        uci add_list bandix_plus.general.iface='br-lan'
+        if [ -n "$wan_ifname" ]; then
+            uci add_list bandix_plus.general.iface="$wan_ifname"
+            echo "Bandix Plus configured interfaces: br-lan, $wan_ifname" >>"$LOGFILE"
+        else
+            echo "Bandix Plus configured interface: br-lan" >>"$LOGFILE"
+        fi
+        uci commit bandix_plus
+    fi
+
+    if [ -x /etc/init.d/bandix-plus ]; then
+        /etc/init.d/bandix-plus enable
+        echo "Bandix Plus service enabled" >>"$LOGFILE"
+    fi
+}
+
+configure_bandix_plus
+
 # 设置编译作者信息
 FILE_PATH="/etc/openwrt_release"
 NEW_DESCRIPTION="Packaged by wukongdaily"

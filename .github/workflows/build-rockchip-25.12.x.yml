@@ -349,6 +349,40 @@ jobs:
           echo "✅ nikki @ ${NIKKI_COMMIT:-latest} / uniwrt @ ${UNIWRT_COMMIT:-latest} / footstrap @ ${FOOTSTRAP_COMMIT:-latest}"
           ls -lah "${{ github.workspace }}/fork-packages/"
 
+      - name: 下载 Bandix Plus 官方 APK
+        run: |
+          set -euo pipefail
+
+          DEST="${{ github.workspace }}/fork-packages/bandix-plus"
+          mkdir -p "$DEST"
+
+          download_apk() {
+            local url="$1"
+            local output="$2"
+            local sha256="$3"
+
+            echo "下载: $url"
+            curl -fL --retry 3 --retry-all-errors --connect-timeout 20 -o "$output" "$url"
+            printf '%s  %s\n' "$sha256" "$output" | sha256sum -c -
+          }
+
+          # ImageBuilder 本地 APK 索引按「包名-版本.apk」取文件，不能保留 Release 的架构后缀。
+          download_apk \
+            "https://github.com/timsaya/openwrt-bandix-plus/releases/download/v0.1.3/bandix-plus-0.1.3-r1_aarch64_generic.apk" \
+            "$DEST/bandix-plus-0.1.3-r1.apk" \
+            "7446c90040717873e905901a560a1ae82e38ecec1a894bf666f2d20fdeb740e9"
+          download_apk \
+            "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r2/luci-app-bandix-plus-0.1.3-r2_all.apk" \
+            "$DEST/luci-app-bandix-plus-0.1.3-r2.apk" \
+            "24fa82d113f6374d055eba175fb7dc2edc8b41a5ef6b9393029040e8fbea0f2b"
+          download_apk \
+            "https://github.com/timsaya/luci-app-bandix-plus/releases/download/v0.1.3-r2/luci-i18n-bandix-plus-zh-cn-26.294.39283.c4f002f_all.apk" \
+            "$DEST/luci-i18n-bandix-plus-zh-cn-26.294.39283~c4f002f.apk" \
+            "5568acc28f5940ee976741b82f68c18bf1896f910bece694646ccc9693c30c1a"
+
+          echo "✅ 已导入 Bandix Plus 官方 APK:"
+          ls -lah "$DEST"
+
       - name: 下载 mihomo 预编译二进制 (MetaCubeX releases, 不自行编译)
         run: |
           set -euo pipefail
@@ -442,10 +476,8 @@ jobs:
           for manifest in "${manifests[@]}"; do
             grep -q '^nikki - ' "$manifest"
             grep -q '^luci-app-nikki - ' "$manifest"
-            if grep -qi 'bandix' "$manifest"; then
-              echo "错误: 固件仍包含 Bandix 软件包"
-              exit 1
-            fi
+            grep -q '^bandix-plus - ' "$manifest"
+            grep -q '^luci-app-bandix-plus - ' "$manifest"
           done
           if jq -e '.inputs.enable_pppoe == "yes" and (.inputs.pppoe_account // "") == ""' \
             "$GITHUB_EVENT_PATH" >/dev/null; then
@@ -453,7 +485,7 @@ jobs:
             grep -qx 'pppoe_account=' custom/pppoe-settings
             grep -qx 'pppoe_password=' custom/pppoe-settings
           fi
-          echo "已确认固件包含 Nikki、不含 Bandix，PPPoE 预设与输入一致。"
+          echo "已确认固件包含 Nikki、Bandix Plus，PPPoE 预设与输入一致。"
 
       - name: 生成动态 Release 说明
         run: |
@@ -520,6 +552,7 @@ jobs:
             echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT / luci-theme-openwrt (imm 官方)"
             echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }}"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
+            echo "- 流量监控: luci-app-bandix-plus (多接口流量监控, timsaya 官方 APK)"
             echo "- 扩容: luci-app-partexp"
             echo ""
             echo "## 📦 固件文件"

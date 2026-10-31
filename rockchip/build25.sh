@@ -65,12 +65,15 @@ rm -f /home/build/immortalwrt/packages/nikki-*.apk \
       /home/build/immortalwrt/packages/luci-app-nikki-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-nikki-*.apk
 
-# 使用工作流校验的 Momo 和 UU 官方包，避免第三方仓库中的同名包覆盖。
+# 使用工作流校验的 Momo、UU 和 Bandix Plus 官方包，避免第三方仓库中的同名包覆盖。
 rm -f /home/build/immortalwrt/packages/momo-*.apk \
       /home/build/immortalwrt/packages/sing-box-*.apk \
       /home/build/immortalwrt/packages/luci-app-momo-*.apk \
       /home/build/immortalwrt/packages/luci-i18n-momo-*.apk \
-      /home/build/immortalwrt/packages/luci-app-uugamebooster-*.apk
+      /home/build/immortalwrt/packages/luci-app-uugamebooster-*.apk \
+      /home/build/immortalwrt/packages/bandix-plus-*.apk \
+      /home/build/immortalwrt/packages/luci-app-bandix-plus-*.apk \
+      /home/build/immortalwrt/packages/luci-i18n-bandix-plus-*.apk
 
 # 导入 GitHub Actions 准备的 APK（SDK 编译的 fork 插件和已校验的官方包）
 if [ -d /home/build/immortalwrt/fork-packages ]; then
@@ -158,6 +161,8 @@ PACKAGES="$PACKAGES kmod-tcp-bbr"
 # sqm-scripts 需要 tc 与 cake/ifb 内核模块; 固件内预置, 保留配置刷机后自动生效
 PACKAGES="$PACKAGES sqm-scripts luci-app-sqm luci-i18n-sqm-zh-cn"
 PACKAGES="$PACKAGES tc-full kmod-sched-core kmod-sched-cake kmod-ifb"
+# ============= 流量监控 (Bandix Plus 官方 APK, 支持多接口流量监控) =============
+PACKAGES="$PACKAGES bandix-plus luci-app-bandix-plus luci-i18n-bandix-plus-zh-cn"
 # ======== shell/custom-packages.sh =======
 # 合并imm仓库以外的第三方插件
 PACKAGES="$PACKAGES $CUSTOM_PACKAGES"
