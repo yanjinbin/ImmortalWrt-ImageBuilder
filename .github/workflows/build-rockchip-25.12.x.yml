@@ -357,6 +357,8 @@ jobs:
               aeris:v1.0.2)           echo b1bfff20f9a847eca0233a67631363247136705afbc297d35cee82fc194df859 ;;
               vantage:v1.0.19)        echo 0cc00d0d7dce4fb816437833f1ab99ed2d71fa2a58fe119281dd3bfbf95689d1 ;;
               vantage-i18n:v1.0.19)   echo 3b7042c3fee7ffe79e07e726e44bd4e2f48b199918f35666263436049f947578 ;;
+              vantage-app:v1.0.19)    echo 76b6353683bce164e7893e6bc6be8a1fd91f5a683e8c3148ecb37cf87273570b ;;
+              vantage-app-i18n:v1.0.19) echo cb6de0ae0ca3e863056f8b3c80f841dbf1cd257d3098be7f5d1846228b301668 ;;
               *)                      echo "" ;;
             esac
           }
@@ -373,6 +375,13 @@ jobs:
           fetch_release anothaDev/luci-theme-vantage "${{ inputs.theme_vantage_version }}" \
             '^luci-i18n-vantage-theme-zh-cn-.*\.apk$' apk theme-vantage-i18n.pkg \
             "$(theme_sha256 vantage-i18n "${{ inputs.theme_vantage_version }}")"
+          # Vantage 的 dashboard 插件 (登录后首页的实时面板) + 插件中文语言包
+          fetch_release anothaDev/luci-theme-vantage "${{ inputs.theme_vantage_version }}" \
+            '^luci-app-vantage-.*\.apk$' apk theme-vantage-app.pkg \
+            "$(theme_sha256 vantage-app "${{ inputs.theme_vantage_version }}")"
+          fetch_release anothaDev/luci-theme-vantage "${{ inputs.theme_vantage_version }}" \
+            '^luci-i18n-vantage-zh-cn-.*\.apk$' apk theme-vantage-app-i18n.pkg \
+            "$(theme_sha256 vantage-app-i18n "${{ inputs.theme_vantage_version }}")"
           for f in /tmp/theme-*.pkg; do
             echo "主题包 $(basename "$f"): sha256=$(sha256sum "$f" | cut -d' ' -f1)"
           done
@@ -609,6 +618,7 @@ jobs:
             echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT (内置 cats/dinos 壁纸) / luci-theme-openwrt (imm 官方)"
             echo "- 默认主题: ${{ inputs.default_theme }}"
             echo "- 内置主题: luci-theme-7dollar @ $THEME_7DOLLAR_TAG / luci-theme-aeris @ $THEME_AERIS_TAG / luci-theme-vantage @ $THEME_VANTAGE_TAG (+ 中文语言包)"
+            echo "- Vantage 面板: luci-app-vantage @ $THEME_VANTAGE_TAG (+ 中文语言包)，登录后首页为实时网络面板"
             echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }} / 7dollar ${{ inputs.theme_7dollar_version }} / aeris ${{ inputs.theme_aeris_version }} / vantage ${{ inputs.theme_vantage_version }}"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
             echo "- 流量监控: luci-app-bandix-plus (多接口流量监控, timsaya 官方 APK)"

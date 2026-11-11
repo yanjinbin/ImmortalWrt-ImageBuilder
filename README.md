@@ -40,7 +40,7 @@
 - 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，默认固定为 `prebuilt-aarch64-25.12-4b8b630`，支持按星期和时间更新订阅、代理组定时切换；也可选择 latest 或其他 release tag）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 代理：Momo v1.2.1（`nikkinikki-org/OpenWrt-momo` 官方 25.12 APK）+ sing-box（ImmortalWrt 软件源），默认关闭，与 Nikki 按需择一启用
 - 游戏加速：luci-app-uugamebooster 1.1-r2（`lmq8267` 原版 APK 已[归档到仓库](packages/README.md)，构建时校验 SHA256 并修复离线安装脚本），默认关闭，启用时从网易下载 UU 二进制；已补齐 luci-compat 与 kmod-tun
-- 主题：luci-theme-openwrt（官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`，保留内置壁纸，默认主题已改为 Vantage）；另预装上游 Release 主题 7Dollar（`itsmaiGe/luci-theme-7dollar`）、Aeris（`wizcheu/luci-theme-aeris`）、Vantage（`anothaDev/luci-theme-vantage` + 中文语言包），构建时按 SHA256 校验；已移除 argon
+- 主题：luci-theme-openwrt（官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`，保留内置壁纸，默认主题已改为 Vantage）；另预装上游 Release 主题 7Dollar（`itsmaiGe/luci-theme-7dollar`）、Aeris（`wizcheu/luci-theme-aeris`）、Vantage（`anothaDev/luci-theme-vantage` + 中文语言包），并预装 Vantage 面板插件 `luci-app-vantage` + 中文语言包（登录后首页为实时网络面板），构建时按 SHA256 校验；已移除 argon
 - Footstrap 版本保护：构建脚本用 `luci-theme-footstrap=<fork 版本>` 锁定预编译包，并把本地 `packages/` 仓库置顶（apk 在版本号相同时优先取更靠前的仓库），避免官方 feeds 的同名包顶掉 fork 包；官方包不含内置壁纸。构建前校验 APK 内含 `wallpapers/cats.svg`、`wallpapers/dinos.svg`，构建后再校验固件 manifest 的版本，任一不满足直接失败
 - 默认主机名：ImmortalWrt-<软路由型号>-Gateway（如 E20C → `ImmortalWrt-E20C-Gateway`、NanoPi-R5C → `ImmortalWrt-NanoPi-R5C-Gateway`），首启按板型自动设置
 - 默认登录密码：`666666`（LuCI 系统->管理权 可修改）

@@ -196,6 +196,8 @@ PACKAGES="$PACKAGES luci-theme-footstrap${FOOTSTRAP_THEME_VERSION:+=$FOOTSTRAP_T
 PACKAGES="$PACKAGES luci-theme-7dollar"
 PACKAGES="$PACKAGES luci-theme-aeris"
 PACKAGES="$PACKAGES luci-theme-vantage luci-i18n-vantage-theme-zh-cn"
+# Vantage dashboard 插件 (登录后首页的实时面板, 只读状态 + 终端命名) + 中文语言包
+PACKAGES="$PACKAGES luci-app-vantage luci-i18n-vantage-zh-cn"
 # ============= 流量统计 (imm 官方) =============
 PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
 # collectd 常用统计模块: CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度 (lm-sensors 自动依赖)

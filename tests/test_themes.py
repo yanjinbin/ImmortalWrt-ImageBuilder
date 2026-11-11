@@ -44,6 +44,22 @@ class BuiltinThemeTest(unittest.TestCase):
             self.workflow,
         )
 
+    def test_workflow_downloads_the_vantage_dashboard_app(self):
+        # Same release as the theme: app + its own zh-cn catalogue.
+        self.assertIn("'^luci-app-vantage-.*\\.apk$' apk theme-vantage-app.pkg", self.workflow)
+        self.assertIn("luci-i18n-vantage-zh-cn-.*\\.apk", self.workflow)
+        self.assertIn(
+            "76b6353683bce164e7893e6bc6be8a1fd91f5a683e8c3148ecb37cf87273570b",
+            self.workflow,
+        )
+        self.assertIn(
+            "cb6de0ae0ca3e863056f8b3c80f841dbf1cd257d3098be7f5d1846228b301668",
+            self.workflow,
+        )
+
+    def test_build_installs_the_vantage_dashboard_app(self):
+        self.assertIn('PACKAGES="$PACKAGES luci-app-vantage luci-i18n-vantage-zh-cn"', self.build)
+
     def test_build_installs_themes(self):
         for package in ("luci-theme-7dollar", "luci-theme-aeris", "luci-theme-vantage"):
             self.assertIn('PACKAGES="$PACKAGES %s' % package, self.build)

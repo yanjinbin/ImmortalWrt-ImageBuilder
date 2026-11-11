@@ -23,6 +23,7 @@
 | luci-theme-7dollar             | 7Dollar 主题 (上游 Release v1.0.14, SHA256 校验) | [itsmaiGe/luci-theme-7dollar](https://github.com/itsmaiGe/luci-theme-7dollar)                     |
 | luci-theme-aeris               | Aeris 主题 (上游 Release v1.0.2, SHA256 校验) | [wizcheu/luci-theme-aeris](https://github.com/wizcheu/luci-theme-aeris)                           |
 | luci-theme-vantage             | Vantage 主题 (上游 Release v1.0.19, SHA256 校验; 含中文语言包) | [anothaDev/luci-theme-vantage](https://github.com/anothaDev/luci-theme-vantage)        |
+| luci-app-vantage               | Vantage 实时网络面板 (登录后首页; 上游 Release v1.0.19, 含中文语言包) | [anothaDev/luci-theme-vantage](https://github.com/anothaDev/luci-theme-vantage) |
 | luci-app-statistics            | 流量统计 (imm 仓库内)    | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
 | luci-app-momo                 | 代理工具               | [nikkinikki-org/momo](https://github.com/nikkinikki-org/OpenWrt-momo)                                                                     |
 | luci-app-passwall2             | 代理工具           | [Openwrt-Passwall/openwrt-passwall2](https://github.com/Openwrt-Passwall/openwrt-passwall2)       |
