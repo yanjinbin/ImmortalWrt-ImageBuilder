@@ -20,6 +20,9 @@
 | luci-theme-uniwrt              | UniWRT 主题 (fork prebuilt release @ adef3c1) | [yanjinbin/uniwrt-luci](https://github.com/yanjinbin/uniwrt-luci)                                          |
 | luci-theme-footstrap           | Footstrap 主题 (fork prebuilt release @ eb24dd5) | [yanjinbin/luci-theme-footstrap](https://github.com/yanjinbin/luci-theme-footstrap)                     |
 | luci-theme-openwrt             | OpenWrt 官方主题 (imm 仓库内) | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
+| luci-theme-7dollar             | 7Dollar 主题 (上游 Release v1.0.14, SHA256 校验) | [itsmaiGe/luci-theme-7dollar](https://github.com/itsmaiGe/luci-theme-7dollar)                     |
+| luci-theme-aeris               | Aeris 主题 (上游 Release v1.0.2, SHA256 校验) | [wizcheu/luci-theme-aeris](https://github.com/wizcheu/luci-theme-aeris)                           |
+| luci-theme-vantage             | Vantage 主题 (上游 Release v1.0.19, SHA256 校验; 含中文语言包) | [anothaDev/luci-theme-vantage](https://github.com/anothaDev/luci-theme-vantage)        |
 | luci-app-statistics            | 流量统计 (imm 仓库内)    | [ImmortalWrt luci feed](https://downloads.immortalwrt.org)                                             |
 | luci-app-momo                 | 代理工具               | [nikkinikki-org/momo](https://github.com/nikkinikki-org/OpenWrt-momo)                                                                     |
 | luci-app-passwall2             | 代理工具           | [Openwrt-Passwall/openwrt-passwall2](https://github.com/Openwrt-Passwall/openwrt-passwall2)       |
@@ -37,3 +40,6 @@
 
 > fork 插件（nikki / luci-theme-uniwrt / luci-theme-footstrap）由各 fork 仓库的 prebuilt release 提供，
 > 固件构建时可选 latest 或指定 release tag（标签即 commit hash），实际版本以对应 Release 说明为准，本表为当前快照。
+>
+> 7Dollar / Aeris / Vantage 只在各自的 GitHub Release 发布（不在 ImmortalWrt 源内），工作流按 tag 下载并校验 SHA256；
+> luci-theme-footstrap 固定使用 fork 预编译版本（官方 feeds 包不含 cats/dinos 内置壁纸），构建时会双重校验。

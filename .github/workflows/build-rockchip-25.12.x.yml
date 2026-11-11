@@ -191,6 +191,18 @@ on:
         description: "luci-theme-footstrap 预编译 release: latest 或 release tag (如 prebuilt-aarch64-25.12-eb24dd5)"
         required: false
         default: "latest"
+      theme_7dollar_version:
+        description: "7Dollar 主题 release: latest 或 release tag (如 v1.0.14)"
+        required: false
+        default: "v1.0.14"
+      theme_aeris_version:
+        description: "Aeris 主题 release: latest 或 release tag (如 v1.0.2)"
+        required: false
+        default: "v1.0.2"
+      theme_vantage_version:
+        description: "Vantage 主题 release: latest 或 release tag (如 v1.0.19)"
+        required: false
+        default: "v1.0.19"
       include_geox:
         description: "是否内置 geox 数据集 (geoip/geosite/mmdb)"
         required: true
@@ -324,6 +336,35 @@ jobs:
             '^(luci-theme-uniwrt-aarch64_generic-openwrt-25\.12.*\.tar\.gz|luci-theme-uniwrt-.*\.apk)$' apk uniwrt.pkg
           fetch_release yanjinbin/luci-theme-footstrap "${{ inputs.footstrap_version }}" \
             '^(luci-theme-footstrap-aarch64_generic-openwrt-25\.12.*\.tar\.gz|luci-theme-footstrap-.*\.apk)$' apk footstrap.pkg
+          # ============= 内置主题 (红框主题集): 7Dollar / Aeris / Vantage =============
+          # 三个主题都不在 ImmortalWrt 官方源里, 只能从上游 Release 取 APK; 资产名不带架构,
+          # 校验 SHA256 后随 fork 插件一起导入 packages/, 由 build25.sh 写进 PACKAGES。
+          # 已固定的 tag 走 SHA256 校验; 选 latest 或新 tag 时不强制校验, 只打印实际哈希。
+          theme_sha256() {
+            case "$1:$2" in
+              7dollar:v1.0.14)        echo d742673ea1ee70448a30aa52a6c8bff513366a7f1b75945858620547df327c97 ;;
+              aeris:v1.0.2)           echo b1bfff20f9a847eca0233a67631363247136705afbc297d35cee82fc194df859 ;;
+              vantage:v1.0.19)        echo 0cc00d0d7dce4fb816437833f1ab99ed2d71fa2a58fe119281dd3bfbf95689d1 ;;
+              vantage-i18n:v1.0.19)   echo 3b7042c3fee7ffe79e07e726e44bd4e2f48b199918f35666263436049f947578 ;;
+              *)                      echo "" ;;
+            esac
+          }
+
+          fetch_release itsmaiGe/luci-theme-7dollar "${{ inputs.theme_7dollar_version }}" \
+            '^luci-theme-7dollar-.*\.apk$' apk theme-7dollar.pkg \
+            "$(theme_sha256 7dollar "${{ inputs.theme_7dollar_version }}")"
+          fetch_release wizcheu/luci-theme-aeris "${{ inputs.theme_aeris_version }}" \
+            '^luci-theme-aeris-.*\.apk$' apk theme-aeris.pkg \
+            "$(theme_sha256 aeris "${{ inputs.theme_aeris_version }}")"
+          fetch_release anothaDev/luci-theme-vantage "${{ inputs.theme_vantage_version }}" \
+            '^luci-theme-vantage-.*\.apk$' apk theme-vantage.pkg \
+            "$(theme_sha256 vantage "${{ inputs.theme_vantage_version }}")"
+          fetch_release anothaDev/luci-theme-vantage "${{ inputs.theme_vantage_version }}" \
+            '^luci-i18n-vantage-theme-zh-cn-.*\.apk$' apk theme-vantage-i18n.pkg \
+            "$(theme_sha256 vantage-i18n "${{ inputs.theme_vantage_version }}")"
+          for f in /tmp/theme-*.pkg; do
+            echo "主题包 $(basename "$f"): sha256=$(sha256sum "$f" | cut -d' ' -f1)"
+          done
           fetch_release nikkinikki-org/OpenWrt-momo v1.2.1 \
             '^momo_aarch64_generic-openwrt-25\.12\.tar\.gz$' apk momo.tar.gz \
             3cea3caac426449805a586f5b79c1639b44c2ca121bd83f89cdcf95bcaa1fbba
@@ -345,6 +386,9 @@ jobs:
           echo "NIKKI_COMMIT=${NIKKI_COMMIT:-latest}" >> "$GITHUB_ENV"
           echo "UNIWRT_COMMIT=${UNIWRT_COMMIT:-latest}" >> "$GITHUB_ENV"
           echo "FOOTSTRAP_COMMIT=${FOOTSTRAP_COMMIT:-latest}" >> "$GITHUB_ENV"
+          echo "THEME_7DOLLAR_TAG=$(cat /tmp/theme-7dollar.pkg.tag 2>/dev/null || echo latest)" >> "$GITHUB_ENV"
+          echo "THEME_AERIS_TAG=$(cat /tmp/theme-aeris.pkg.tag 2>/dev/null || echo latest)" >> "$GITHUB_ENV"
+          echo "THEME_VANTAGE_TAG=$(cat /tmp/theme-vantage.pkg.tag 2>/dev/null || echo latest)" >> "$GITHUB_ENV"
           echo "NIKKI_VER=${NIKKI_VER:-unknown}" >> "$GITHUB_ENV"
           echo "LUCI_NIKKI_VER=${LUCI_NIKKI_VER:-unknown}" >> "$GITHUB_ENV"
           echo "✅ nikki @ ${NIKKI_COMMIT:-latest} / uniwrt @ ${UNIWRT_COMMIT:-latest} / footstrap @ ${FOOTSTRAP_COMMIT:-latest}"
@@ -550,8 +594,9 @@ jobs:
             else
               echo "- 代理数据: 未内置 (运行时按需下载)"
             fi
-            echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT / luci-theme-openwrt (imm 官方)"
-            echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }}"
+            echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT (内置 cats/dinos 壁纸) / luci-theme-openwrt (imm 官方)"
+            echo "- 内置主题: luci-theme-7dollar @ $THEME_7DOLLAR_TAG / luci-theme-aeris @ $THEME_AERIS_TAG / luci-theme-vantage @ $THEME_VANTAGE_TAG (+ 中文语言包)"
+            echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }} / 7dollar ${{ inputs.theme_7dollar_version }} / aeris ${{ inputs.theme_aeris_version }} / vantage ${{ inputs.theme_vantage_version }}"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
             echo "- 流量监控: luci-app-bandix-plus (多接口流量监控, timsaya 官方 APK)"
             echo "- 扩容: luci-app-partexp"

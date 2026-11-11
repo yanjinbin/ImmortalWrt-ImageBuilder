@@ -86,6 +86,39 @@ else
     echo "⚠️ 未挂载 fork-packages 目录, 跳过 fork 插件导入"
 fi
 
+# ============= Footstrap 壁纸保护 (cats / dinos) =============
+# 官方 feeds 的 luci-theme-footstrap 与 fork 预编译包版本号可能相同甚至更高, ImageBuilder 会
+# 静默选中官方包, 而官方包不含内置壁纸, 导致 Appearance 里没有 Cats / Dinos 可选。
+# 这里按下载到的 APK 文件名锁定 fork 版本 (apk 语法 pkg=version), 并在构建前后各校验一次。
+FOOTSTRAP_THEME_APK="$(find /home/build/immortalwrt/packages -maxdepth 1 -name 'luci-theme-footstrap-*.apk' -print -quit 2>/dev/null)"
+FOOTSTRAP_THEME_VERSION=""
+if [ -n "$FOOTSTRAP_THEME_APK" ]; then
+    FOOTSTRAP_THEME_VERSION="$(basename "$FOOTSTRAP_THEME_APK" .apk)"
+    FOOTSTRAP_THEME_VERSION="${FOOTSTRAP_THEME_VERSION#luci-theme-footstrap-}"
+
+    # 直接检查 APK 内容: 内置壁纸必须真的在包里, 否则后面的版本锁定没有意义。
+    APK_HOST_BIN="/home/build/immortalwrt/staging_dir/host/bin/apk"
+    if [ -x "$APK_HOST_BIN" ]; then
+        rm -rf /tmp/footstrap-wallpaper-check
+        mkdir -p /tmp/footstrap-wallpaper-check
+        if "$APK_HOST_BIN" extract --allow-untrusted \
+                --destination /tmp/footstrap-wallpaper-check "$FOOTSTRAP_THEME_APK" >/dev/null 2>&1 \
+           && [ -f /tmp/footstrap-wallpaper-check/www/luci-static/footstrap/wallpapers/cats.svg ] \
+           && [ -f /tmp/footstrap-wallpaper-check/www/luci-static/footstrap/wallpapers/dinos.svg ]; then
+            echo "✅ luci-theme-footstrap $FOOTSTRAP_THEME_VERSION 含内置 cats/dinos 壁纸"
+        else
+            echo "错误: $FOOTSTRAP_THEME_APK 缺少 www/luci-static/footstrap/wallpapers/{cats,dinos}.svg, 终止构建"
+            exit 1
+        fi
+        rm -rf /tmp/footstrap-wallpaper-check
+    fi
+
+    echo "🔒 luci-theme-footstrap 固定为 fork 预编译版本: $FOOTSTRAP_THEME_VERSION"
+else
+    echo "错误: 未找到 fork 的 luci-theme-footstrap APK, 无法保证内置 cats/dinos 壁纸, 终止构建"
+    exit 1
+fi
+
 # UU 1.1 的安装脚本未使用 IPKG_INSTROOT，修复后重新打包供离线安装。
 python3 shell/repair-uugamebooster.py \
     /home/build/immortalwrt/staging_dir/host/bin/apk \
@@ -141,10 +174,15 @@ if [ "$INCLUDE_DOCKER" = "yes" ]; then
 fi
 # 文件管理器
 PACKAGES="$PACKAGES luci-i18n-filemanager-zh-cn"
-# ============= 主题 (fork 编译 + imm 官方) =============
+# ============= 主题 (fork 编译 + imm 官方 + 上游 Release) =============
 PACKAGES="$PACKAGES luci-theme-openwrt"
 PACKAGES="$PACKAGES luci-theme-uniwrt"
-PACKAGES="$PACKAGES luci-theme-footstrap"
+# fork 预编译版本锁定, 官方 feeds 包不含 cats/dinos 内置壁纸
+PACKAGES="$PACKAGES luci-theme-footstrap${FOOTSTRAP_THEME_VERSION:+=$FOOTSTRAP_THEME_VERSION}"
+# 红框主题集: 7Dollar / Aeris / Vantage (APK 由工作流从上游 Release 下载到 packages/)
+PACKAGES="$PACKAGES luci-theme-7dollar"
+PACKAGES="$PACKAGES luci-theme-aeris"
+PACKAGES="$PACKAGES luci-theme-vantage luci-i18n-vantage-theme-zh-cn"
 # ============= 流量统计 (imm 官方) =============
 PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
 # collectd 常用统计模块: CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度 (lm-sensors 自动依赖)
@@ -208,11 +246,43 @@ else
 fi
 
 
+# apk 在版本号相同时优先选择仓库列表里更靠前的那一个 (solver.c: "prefer lowest available
+# repository")。ImageBuilder 默认把本地 packages/ 追加在官方源之后, 所以同名同版本时官方包会
+# 赢; 把本地仓库提到第一行, fork 的 footstrap 才能在版本号相同的情况下胜出。
+LOCAL_PACKAGE_REPO="/home/build/immortalwrt/packages/packages.adb"
+if [ -f /home/build/immortalwrt/repositories ]; then
+    if ! grep -qxF "$LOCAL_PACKAGE_REPO" /home/build/immortalwrt/repositories; then
+        if { printf '%s\n' "$LOCAL_PACKAGE_REPO"; cat /home/build/immortalwrt/repositories; } \
+                > /tmp/repositories.local-first \
+           && mv /tmp/repositories.local-first /home/build/immortalwrt/repositories; then
+            echo "✅ 本地 packages 仓库已置顶: $LOCAL_PACKAGE_REPO"
+        else
+            echo "⚠️ 置顶本地 packages 仓库失败, 相同版本时可能选中官方 footstrap"
+        fi
+    fi
+fi
+
 make image PROFILE=$PROFILE PACKAGES="$PACKAGES" FILES="/home/build/immortalwrt/files" ROOTFS_PARTSIZE=$ROOTFS_PARTSIZE
 
 if [ $? -ne 0 ]; then
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Error: Build failed!"
     exit 1
+fi
+
+# ============= 构建后校验: 固件里必须是带壁纸的 fork 版 footstrap =============
+if [ -n "$FOOTSTRAP_THEME_VERSION" ]; then
+    MANIFEST_FILE="$(find /home/build/immortalwrt/bin/targets -maxdepth 3 -name '*.manifest' -print -quit 2>/dev/null)"
+    if [ -n "$MANIFEST_FILE" ]; then
+        if grep -Fq "luci-theme-footstrap - $FOOTSTRAP_THEME_VERSION" "$MANIFEST_FILE"; then
+            echo "✅ 固件 footstrap 版本校验通过: $FOOTSTRAP_THEME_VERSION (含 cats/dinos 壁纸)"
+        else
+            echo "错误: 固件里的 luci-theme-footstrap 不是 fork 版本, 内置壁纸会丢失"
+            grep -F "luci-theme-footstrap" "$MANIFEST_FILE" || true
+            exit 1
+        fi
+    else
+        echo "⚠️ 未找到固件 manifest, 跳过 footstrap 版本校验"
+    fi
 fi
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Build completed successfully."
