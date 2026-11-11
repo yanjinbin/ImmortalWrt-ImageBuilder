@@ -27,7 +27,13 @@ class PortsStatusTest(unittest.TestCase):
 
     def test_zashboard_hyperlink_tile_is_added(self):
         self.assertIn("renderZashboardTile", self.source)
-        self.assertIn(":9090/ui", self.source)
+        self.assertIn(":9090/ui/", self.source)
+        self.assertIn("?host=", self.source)
+        self.assertIn("&hostname=", self.source)
+        self.assertIn("&port=9090", self.source)
+        self.assertIn("&secret=", self.source)
+        self.assertIn("'666666'", self.source)
+        self.assertIn("#/proxies", self.source)
         self.assertIn("Nikki", self.source)
         self.assertIn("Zashboard", self.source)
 

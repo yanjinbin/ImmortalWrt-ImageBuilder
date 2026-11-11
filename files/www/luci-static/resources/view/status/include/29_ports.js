@@ -447,7 +447,13 @@ function renderRateTile(rate) {
 
 function renderZashboardTile() {
 	const host = window.location.hostname || '192.168.1.1';
-	const href = 'http://' + host + ':9090/ui';
+	const secret = '666666';
+	const href = 'http://' + host + ':9090/ui/'
+		+ '?host=' + encodeURIComponent(host)
+		+ '&hostname=' + encodeURIComponent(host)
+		+ '&port=9090'
+		+ '&secret=' + encodeURIComponent(secret)
+		+ '#/proxies';
 
 	return E('a', {
 		'class': 'ifacebox',
