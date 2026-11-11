@@ -26,6 +26,19 @@ mkdir -p /home/build/immortalwrt/files/etc
 printf '%s\n' "$LOGIN_DAYS" > /home/build/immortalwrt/files/etc/luci-login-days
 echo "LuCI 登录时长预置为 ${LOGIN_DAYS} 天"
 
+# 默认主题：由 files/etc/uci-defaults/97-luci-theme.sh 在首启读取该文件后写入 luci.main。
+# 预置主题必须在固件里真的存在，否则首启会回退到 Footstrap/Bootstrap。
+DEFAULT_THEME="${DEFAULT_THEME:-vantage}"
+case "$DEFAULT_THEME" in
+    vantage|7dollar|aeris|footstrap|bootstrap) ;;
+    *)
+        echo "错误: DEFAULT_THEME 只支持 vantage/7dollar/aeris/footstrap/bootstrap, 当前: $DEFAULT_THEME"
+        exit 1
+        ;;
+esac
+printf '%s\n' "$DEFAULT_THEME" > /home/build/immortalwrt/files/etc/luci-default-theme
+echo "默认主题预置为 ${DEFAULT_THEME}"
+
 echo "Create pppoe-settings"
 mkdir -p  /home/build/immortalwrt/files/etc/config
 

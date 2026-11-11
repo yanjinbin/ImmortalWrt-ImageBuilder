@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 
@@ -84,6 +86,73 @@ class FootstrapWallpaperTest(unittest.TestCase):
     def test_missing_fork_package_fails_the_build(self):
         # Silently falling back to the feed theme is what loses the wallpapers.
         self.assertIn("未找到 fork 的 luci-theme-footstrap APK", self.build)
+
+
+class DefaultThemeTest(unittest.TestCase):
+    """Vantage is the default theme; the uci-defaults script must fall back when a
+    configured theme is missing instead of pointing mediaurlbase at nothing."""
+
+    def setUp(self):
+        self.build = BUILD_SCRIPT.read_text(encoding="utf-8")
+        self.workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.script_source = (ROOT / "files/etc/uci-defaults/97-luci-theme.sh").read_text(encoding="utf-8")
+
+    def test_workflow_defaults_to_vantage(self):
+        self.assertIn("default_theme:", self.workflow)
+        self.assertIn('default: "vantage"', self.workflow)
+        self.assertIn('-e DEFAULT_THEME="${{ inputs.default_theme }}"', self.workflow)
+
+    def test_build_writes_the_theme_choice(self):
+        self.assertIn('DEFAULT_THEME="${DEFAULT_THEME:-vantage}"', self.build)
+        self.assertIn("/files/etc/luci-default-theme", self.build)
+        for theme in ("vantage", "7dollar", "aeris", "footstrap", "bootstrap"):
+            self.assertIn(theme, self.build)
+
+    def run_theme_script(self, default_theme=None, installed=("vantage",)):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in installed:
+                (root / "www/luci-static" / name).mkdir(parents=True, exist_ok=True)
+                header = root / "usr/share/ucode/luci/template/themes" / name / "header.ut"
+                header.parent.mkdir(parents=True, exist_ok=True)
+                header.write_text("")
+
+            theme_file = root / "etc/luci-default-theme"
+            theme_file.parent.mkdir(parents=True, exist_ok=True)
+            if default_theme is not None:
+                theme_file.write_text(default_theme + "\n")
+
+            script = (self.script_source
+                      .replace("/etc/luci-default-theme", str(theme_file))
+                      .replace("/www/luci-static", str(root / "www/luci-static"))
+                      .replace("/usr/share/ucode/luci/template/themes",
+                               str(root / "usr/share/ucode/luci/template/themes")))
+            runner = root / "run.sh"
+            runner.write_text('uci() { case "$1" in -q) return 1 ;; esac; echo "uci $*"; }\n' + script)
+            return subprocess.check_output(["sh", str(runner)], text=True, stderr=subprocess.STDOUT)
+
+    def test_vantage_is_selected_by_default(self):
+        out = self.run_theme_script()
+        self.assertIn("uci set luci.main.mediaurlbase=/luci-static/vantage", out)
+        self.assertIn("uci commit luci", out)
+
+    def test_configured_theme_wins(self):
+        out = self.run_theme_script(default_theme="aeris", installed=("aeris", "vantage"))
+        self.assertIn("uci set luci.main.mediaurlbase=/luci-static/aeris", out)
+
+    def test_missing_theme_falls_back_to_footstrap(self):
+        out = self.run_theme_script(default_theme="7dollar", installed=("footstrap", "bootstrap"))
+        self.assertIn("uci set luci.main.mediaurlbase=/luci-static/footstrap", out)
+        self.assertNotIn("/luci-static/7dollar", out)
+
+    def test_missing_everything_falls_back_to_bootstrap(self):
+        out = self.run_theme_script(default_theme="7dollar", installed=("bootstrap",))
+        self.assertIn("uci set luci.main.mediaurlbase=/luci-static/bootstrap", out)
+
+    def test_no_theme_at_all_keeps_the_current_setting(self):
+        out = self.run_theme_script(default_theme="7dollar", installed=())
+        self.assertNotIn("uci set luci.main.mediaurlbase", out)
+        self.assertIn("保持当前主题设置", out)
 
 
 if __name__ == "__main__":

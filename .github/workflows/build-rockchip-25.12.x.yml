@@ -203,6 +203,17 @@ on:
         description: "Vantage 主题 release: latest 或 release tag (如 v1.0.19)"
         required: false
         default: "v1.0.19"
+      default_theme:
+        description: "默认主题 (首启写入 luci.main.mediaurlbase)"
+        required: true
+        default: "vantage"
+        type: choice
+        options:
+          - vantage
+          - 7dollar
+          - aeris
+          - footstrap
+          - bootstrap
       include_geox:
         description: "是否内置 geox 数据集 (geoip/geosite/mmdb)"
         required: true
@@ -510,6 +521,7 @@ jobs:
               -e PPPOE_ACCOUNT="$pppoe_account" \
               -e PPPOE_PASSWORD="$pppoe_password" \
               -e ENABLE_IPV6="${{ inputs.enable_ipv6 }}" \
+              -e DEFAULT_THEME="${{ inputs.default_theme }}" \
           immortalwrt/imagebuilder:rockchip-armv8-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
         
     
@@ -595,6 +607,7 @@ jobs:
               echo "- 代理数据: 未内置 (运行时按需下载)"
             fi
             echo "- 主题: luci-theme-uniwrt @ $UNIWRT_COMMIT / luci-theme-footstrap @ $FOOTSTRAP_COMMIT (内置 cats/dinos 壁纸) / luci-theme-openwrt (imm 官方)"
+            echo "- 默认主题: ${{ inputs.default_theme }}"
             echo "- 内置主题: luci-theme-7dollar @ $THEME_7DOLLAR_TAG / luci-theme-aeris @ $THEME_AERIS_TAG / luci-theme-vantage @ $THEME_VANTAGE_TAG (+ 中文语言包)"
             echo "- 预编译源: nikki ${{ inputs.nikki_version }} / uniwrt ${{ inputs.uniwrt_version }} / footstrap ${{ inputs.footstrap_version }} / 7dollar ${{ inputs.theme_7dollar_version }} / aeris ${{ inputs.theme_aeris_version }} / vantage ${{ inputs.theme_vantage_version }}"
             echo "- 统计: luci-app-statistics (CPU/内存/负载/接口流量/磁盘/CPU+GPU温度)"
