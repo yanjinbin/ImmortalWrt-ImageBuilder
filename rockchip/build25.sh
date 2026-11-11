@@ -86,6 +86,17 @@ else
     echo "⚠️ 未挂载 fork-packages 目录, 跳过 fork 插件导入"
 fi
 
+# 官方 feeds 里的 luci-theme-footstrap 版本高于 fork 预编译包, ImageBuilder 会优先选官方包,
+# 导致 fork 内置的 cats/dinos 壁纸丢失。按下载到的 APK 文件名锁定 fork 的预编译版本。
+FOOTSTRAP_PKG_VERSION=""
+FOOTSTRAP_PKG_APK="$(find /home/build/immortalwrt/packages -maxdepth 1 -name 'luci-theme-footstrap-*.apk' 2>/dev/null | head -n1)"
+if [ -n "$FOOTSTRAP_PKG_APK" ]; then
+    FOOTSTRAP_PKG_VERSION="$(basename "$FOOTSTRAP_PKG_APK" .apk | sed 's/^luci-theme-footstrap-//')"
+    echo "🔒 luci-theme-footstrap 固定为 fork 预编译版本: $FOOTSTRAP_PKG_VERSION"
+else
+    echo "⚠️ 未找到 fork 的 luci-theme-footstrap APK, 将使用官方 feeds 版本"
+fi
+
 # UU 1.1 的安装脚本未使用 IPKG_INSTROOT，修复后重新打包供离线安装。
 python3 shell/repair-uugamebooster.py \
     /home/build/immortalwrt/staging_dir/host/bin/apk \
@@ -144,7 +155,7 @@ PACKAGES="$PACKAGES luci-i18n-filemanager-zh-cn"
 # ============= 主题 (fork 编译 + imm 官方) =============
 PACKAGES="$PACKAGES luci-theme-openwrt"
 PACKAGES="$PACKAGES luci-theme-uniwrt"
-PACKAGES="$PACKAGES luci-theme-footstrap"
+PACKAGES="$PACKAGES luci-theme-footstrap${FOOTSTRAP_PKG_VERSION:+=$FOOTSTRAP_PKG_VERSION}"
 # ============= 流量统计 (imm 官方) =============
 PACKAGES="$PACKAGES luci-app-statistics luci-i18n-statistics-zh-cn"
 # collectd 常用统计模块: CPU / 内存 / 负载 / 接口流量 / 磁盘 / 传感器温度 (lm-sensors 自动依赖)
