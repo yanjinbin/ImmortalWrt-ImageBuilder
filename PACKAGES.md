@@ -43,4 +43,4 @@
 > 固件构建时可选 latest 或指定 release tag（标签即 commit hash），实际版本以对应 Release 说明为准，本表为当前快照。
 >
 > 7Dollar / Aeris / Vantage 只在各自的 GitHub Release 发布（不在 ImmortalWrt 源内），工作流按 tag 下载并校验 SHA256；
-> luci-theme-footstrap 固定使用 fork 预编译版本（官方 feeds 包不含 cats/dinos 内置壁纸），构建时会双重校验。
+> luci-theme-footstrap 使用 fork 预编译包并在构建时重打包抬高版本号（官方 feeds 包不含 cats/dinos 内置壁纸），构建前后双重校验。

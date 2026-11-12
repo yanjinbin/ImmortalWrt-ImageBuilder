@@ -100,37 +100,39 @@ else
 fi
 
 # ============= Footstrap 壁纸保护 (cats / dinos) =============
-# 官方 feeds 的 luci-theme-footstrap 与 fork 预编译包版本号可能相同甚至更高, ImageBuilder 会
-# 静默选中官方包, 而官方包不含内置壁纸, 导致 Appearance 里没有 Cats / Dinos 可选。
-# 这里按下载到的 APK 文件名锁定 fork 版本 (apk 语法 pkg=version), 并在构建前后各校验一次。
+# 官方 feeds 的 luci-theme-footstrap 与 fork 预编译包版本号完全相同（同一份 LuCI 快照），
+# 但只有 fork 包带内置壁纸，而 apk 在版本相同时会选中先加载的官方源。
+# 也不能用 PACKAGES="luci-theme-footstrap=<版本>" 锁定：ImageBuilder 的 FormatPackages 会把
+# 最后一个 =版本 泄漏给后面所有包（world[pkg=26.315...]），package_install 直接 exit 99。
+# 因此给 fork 包抬高 release 版本号（26.x~hash -> 26.x~hash-r2），让 apk 自然选中它。
 FOOTSTRAP_THEME_APK="$(find /home/build/immortalwrt/packages -maxdepth 1 -name 'luci-theme-footstrap-*.apk' -print -quit 2>/dev/null)"
 FOOTSTRAP_THEME_VERSION=""
-if [ -n "$FOOTSTRAP_THEME_APK" ]; then
-    FOOTSTRAP_THEME_VERSION="$(basename "$FOOTSTRAP_THEME_APK" .apk)"
-    FOOTSTRAP_THEME_VERSION="${FOOTSTRAP_THEME_VERSION#luci-theme-footstrap-}"
-
-    # 直接检查 APK 内容: 内置壁纸必须真的在包里, 否则后面的版本锁定没有意义。
-    APK_HOST_BIN="/home/build/immortalwrt/staging_dir/host/bin/apk"
-    if [ -x "$APK_HOST_BIN" ]; then
-        rm -rf /tmp/footstrap-wallpaper-check
-        mkdir -p /tmp/footstrap-wallpaper-check
-        if "$APK_HOST_BIN" extract --allow-untrusted \
-                --destination /tmp/footstrap-wallpaper-check "$FOOTSTRAP_THEME_APK" >/dev/null 2>&1 \
-           && [ -f /tmp/footstrap-wallpaper-check/www/luci-static/footstrap/wallpapers/cats.svg ] \
-           && [ -f /tmp/footstrap-wallpaper-check/www/luci-static/footstrap/wallpapers/dinos.svg ]; then
-            echo "✅ luci-theme-footstrap $FOOTSTRAP_THEME_VERSION 含内置 cats/dinos 壁纸"
-        else
-            echo "错误: $FOOTSTRAP_THEME_APK 缺少 www/luci-static/footstrap/wallpapers/{cats,dinos}.svg, 终止构建"
-            exit 1
-        fi
-        rm -rf /tmp/footstrap-wallpaper-check
-    fi
-
-    echo "🔒 luci-theme-footstrap 固定为 fork 预编译版本: $FOOTSTRAP_THEME_VERSION"
-else
+if [ -z "$FOOTSTRAP_THEME_APK" ]; then
     echo "错误: 未找到 fork 的 luci-theme-footstrap APK, 无法保证内置 cats/dinos 壁纸, 终止构建"
     exit 1
 fi
+
+APK_HOST_BIN="/home/build/immortalwrt/staging_dir/host/bin/apk"
+if [ ! -x "$APK_HOST_BIN" ]; then
+    echo "错误: 未找到 ImageBuilder 的 apk 工具 ($APK_HOST_BIN), 无法重打包 footstrap"
+    exit 1
+fi
+
+# 重打包同时校验 APK 内确实带 www/luci-static/footstrap/wallpapers/{cats,dinos}.svg
+if ! REPIN_APK="$(python3 shell/repin-footstrap.py "$APK_HOST_BIN" "$FOOTSTRAP_THEME_APK" /tmp/footstrap-repin)"; then
+    echo "错误: footstrap 重打包失败 (缺少 cats/dinos 壁纸或 mkpkg 不可用), 终止构建"
+    exit 1
+fi
+[ -s "$REPIN_APK" ] || {
+    echo "错误: footstrap 重打包没有产物, 终止构建"
+    exit 1
+}
+
+rm -f "$FOOTSTRAP_THEME_APK"
+cp -f "$REPIN_APK" /home/build/immortalwrt/packages/
+FOOTSTRAP_THEME_VERSION="$(basename "$REPIN_APK" .apk)"
+FOOTSTRAP_THEME_VERSION="${FOOTSTRAP_THEME_VERSION#luci-theme-footstrap-}"
+echo "✅ luci-theme-footstrap 重打包为 $FOOTSTRAP_THEME_VERSION (含内置 cats/dinos 壁纸)"
 
 # UU 1.1 的安装脚本未使用 IPKG_INSTROOT，修复后重新打包供离线安装。
 python3 shell/repair-uugamebooster.py \
@@ -190,8 +192,8 @@ PACKAGES="$PACKAGES luci-i18n-filemanager-zh-cn"
 # ============= 主题 (fork 编译 + imm 官方 + 上游 Release) =============
 PACKAGES="$PACKAGES luci-theme-openwrt"
 PACKAGES="$PACKAGES luci-theme-uniwrt"
-# fork 预编译版本锁定, 官方 feeds 包不含 cats/dinos 内置壁纸
-PACKAGES="$PACKAGES luci-theme-footstrap${FOOTSTRAP_THEME_VERSION:+=$FOOTSTRAP_THEME_VERSION}"
+# fork 预编译包已重打包抬高版本号, apk 会自然选中它 (官方 feeds 包不含 cats/dinos 壁纸)
+PACKAGES="$PACKAGES luci-theme-footstrap"
 # 红框主题集: 7Dollar / Aeris / Vantage (APK 由工作流从上游 Release 下载到 packages/)
 PACKAGES="$PACKAGES luci-theme-7dollar"
 PACKAGES="$PACKAGES luci-theme-aeris"
@@ -262,8 +264,8 @@ fi
 
 
 # apk 在版本号相同时优先选择仓库列表里更靠前的那一个 (solver.c: "prefer lowest available
-# repository")。ImageBuilder 默认把本地 packages/ 追加在官方源之后, 所以同名同版本时官方包会
-# 赢; 把本地仓库提到第一行, fork 的 footstrap 才能在版本号相同的情况下胜出。
+# repository")。ImageBuilder 默认把本地 packages/ 追加在官方源之后, 同名同版本时官方包会赢;
+# 本地 packages/ 里是工作流校验过的产物 (含重打包后的 footstrap), 置顶后同版本优先用本地包。
 LOCAL_PACKAGE_REPO="/home/build/immortalwrt/packages/packages.adb"
 if [ -f /home/build/immortalwrt/repositories ]; then
     if ! grep -qxF "$LOCAL_PACKAGE_REPO" /home/build/immortalwrt/repositories; then

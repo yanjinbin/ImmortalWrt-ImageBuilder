@@ -77,17 +77,24 @@ class FootstrapWallpaperTest(unittest.TestCase):
         self.assertIn("FOOTSTRAP_THEME_VERSION", self.build)
         self.assertIn("luci-theme-footstrap-*.apk", self.build)
 
-    def test_package_is_pinned_to_the_fork_version(self):
-        self.assertIn(
-            'PACKAGES="$PACKAGES luci-theme-footstrap${FOOTSTRAP_THEME_VERSION:+=$FOOTSTRAP_THEME_VERSION}"',
-            self.build,
-        )
-        self.assertNotIn('PACKAGES="$PACKAGES luci-theme-footstrap"\n', self.build)
+    def test_fork_package_version_is_bumped_instead_of_pinned(self):
+        # PACKAGES="pkg=version" breaks ImageBuilder (FormatPackages leaks the
+        # constraint onto every following package), so the fork APK is repacked
+        # with a higher release revision and installed by plain name.
+        self.assertIn('PACKAGES="$PACKAGES luci-theme-footstrap"\n', self.build)
+        self.assertNotIn("luci-theme-footstrap${FOOTSTRAP_THEME_VERSION", self.build)
+        self.assertNotRegex(self.build, r'PACKAGES="\$PACKAGES luci-theme-footstrap[^"\n]*=')
+        self.assertIn("shell/repin-footstrap.py", self.build)
+
+    def test_bumped_version_is_read_back_from_the_repacked_apk(self):
+        self.assertIn('FOOTSTRAP_THEME_VERSION="$(basename "$REPIN_APK" .apk)"', self.build)
+        self.assertIn("luci-theme-footstrap-", self.build)
 
     def test_wallpaper_presets_are_verified_before_the_build(self):
-        self.assertIn("www/luci-static/footstrap/wallpapers/cats.svg", self.build)
-        self.assertIn("www/luci-static/footstrap/wallpapers/dinos.svg", self.build)
-        self.assertIn("extract --allow-untrusted", self.build)
+        repin = (ROOT / "shell/repin-footstrap.py").read_text(encoding="utf-8")
+        self.assertIn('"cats.svg", "dinos.svg"', repin)
+        self.assertIn("www/luci-static/footstrap/wallpapers", repin)
+        self.assertIn("refusing to ship a theme without cats/dinos", repin)
 
     def test_local_packages_repo_is_promoted_for_version_ties(self):
         # apk prefers the lowest-numbered repository when versions are equal, so the
@@ -169,6 +176,39 @@ class DefaultThemeTest(unittest.TestCase):
         out = self.run_theme_script(default_theme="7dollar", installed=())
         self.assertNotIn("uci set luci.main.mediaurlbase", out)
         self.assertIn("保持当前主题设置", out)
+
+
+class FootstrapRepinTest(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "repin_footstrap", ROOT / "shell/repin-footstrap.py")
+        self.module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.module)
+
+    def test_release_revision_is_bumped(self):
+        self.assertEqual(self.module.bump_version("26.315.53617~9ec99c3"),
+                         "26.315.53617~9ec99c3-r2")
+        self.assertEqual(self.module.bump_version("1.0.2-r9"), "1.0.2-r10")
+        self.assertEqual(self.module.bump_version("1.0"), "1.0-r2")
+
+    def test_info_is_copied_without_stale_metadata(self):
+        info = {
+            "name": "luci-theme-footstrap",
+            "version": "26.315.53617~9ec99c3",
+            "hashes": "abc",
+            "installed-size": 468885,
+            "depends": ["libc", "luci-base"],
+            "provides": ["luci-theme-footstrap-any"],
+            "license": "Apache-2.0",
+        }
+        args = self.module.info_arguments(info, "26.315.53617~9ec99c3-r2")
+        joined = " ".join(args)
+        self.assertIn("version:26.315.53617~9ec99c3-r2", joined)
+        self.assertIn("depends:libc luci-base", joined)
+        self.assertIn("provides:luci-theme-footstrap-any", joined)
+        self.assertNotIn("hashes:", joined)
+        self.assertNotIn("installed-size:", joined)
 
 
 if __name__ == "__main__":
