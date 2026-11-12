@@ -48,6 +48,25 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         # 第三方 DoH 实测 800ms，不再写进 proxy-server-nameserver
         self.assertNotIn("sh.dns44.cn", self.script)
 
+    def test_enforces_lan_pure_ipv4_and_disables_delegation(self):
+        # 局域网终端纯 IPv4 出口，避免双栈 Happy Eyeballs 黑洞
+        self.assertIn("uci -q delete network.lan.ip6assign", self.script)
+        self.assertIn("uci set network.lan.delegate='0'", self.script)
+        self.assertIn("uci set \"dhcp.${section}.ra='disabled'\"", self.script)
+        self.assertIn("uci set \"dhcp.${section}.dhcpv6='disabled'\"", self.script)
+        self.assertIn("uci commit network", self.script)
+
+    def test_disables_nikki_lan_ipv6_proxy(self):
+        # 关闭 nikki 局域网 IPv6 透明代理，避免被规则首行 IP-CIDR6,::/0,REJECT 拦截
+        self.assertIn("uci set nikki.proxy.ipv6_proxy='0'", self.script)
+        self.assertIn("uci set nikki.proxy.ipv6_dns_hijack='0'", self.script)
+
+    def test_prepends_wechat_and_tencent_direct_rules(self):
+        # 预置置顶微信与腾讯直连规则，防止第三方去广告规则误杀微信传图
+        self.assertIn("matcher='wechat'", self.script)
+        self.assertIn("matcher='tencent'", self.script)
+        self.assertIn("uci set nikki.@rule[-1].node='DIRECT'", self.script)
+
 
 if __name__ == "__main__":
     unittest.main()

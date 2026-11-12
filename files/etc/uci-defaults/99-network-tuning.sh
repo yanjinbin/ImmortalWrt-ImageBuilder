@@ -65,6 +65,48 @@ EOF
 	uci set nikki.mixin.mixin_file_content='1'
 fi
 
+# 6) 局域网纯 IPv4 出口策略 (保留 WAN6 供路由器连接 IPv6 VPS, 但 LAN 禁止下发 IPv6 前缀)
+#    - 微信等国内 App 在双栈环境下会并发探测 IPv6 直连, 但若上游路由或透明代理规则阻断(如 IP-CIDR6,::/0,REJECT),
+#      会导致发图片转圈红感叹号、历史漫游记录卡死等问题。
+#    - 将 LAN 接口设为 delegate=0 并关闭 RA/DHCPv6, 使内网终端对外纯 IPv4, 彻底根治双栈黑洞。
+if uci -q get network.lan >/dev/null 2>&1; then
+	uci -q delete network.lan.ip6assign
+	uci set network.lan.delegate='0'
+fi
+
+for section in $(uci -q show dhcp | sed -n 's/^dhcp\.\([^.=]*\)=dhcp$/\1/p'); do
+	if [ "$(uci -q get "dhcp.${section}.interface")" = "lan" ]; then
+		uci set "dhcp.${section}.ra='disabled'"
+		uci set "dhcp.${section}.dhcpv6='disabled'"
+		uci set "dhcp.${section}.ndp='disabled'"
+	fi
+done
+
+# 7) 关闭 nikki 局域网 IPv6 透明代理
+#    - 既然内网对外是纯 IPv4, 关闭局域网 IPv6 代理可避免偶发 IPv6 流量被送进 TPROXY 遭规则拦截
+if uci -q get nikki.proxy >/dev/null 2>&1; then
+	uci set nikki.proxy.ipv6_proxy='0'
+	uci set nikki.proxy.ipv6_dns_hijack='0'
+fi
+
+# 8) 预置微信与腾讯多媒体直连规则 (置顶)
+#    - 微信图片上传 CDN 与朋友圈经常被第三方去广告规则误杀, 显式将 wechat 和 tencent 直连规则置顶
+if ! uci -q show nikki | grep -q "matcher='wechat'"; then
+	uci add nikki rule >/dev/null
+	uci set nikki.@rule[-1].enabled='1'
+	uci set nikki.@rule[-1].type='GEOSITE'
+	uci set nikki.@rule[-1].matcher='wechat'
+	uci set nikki.@rule[-1].node='DIRECT'
+fi
+if ! uci -q show nikki | grep -q "matcher='tencent'"; then
+	uci add nikki rule >/dev/null
+	uci set nikki.@rule[-1].enabled='1'
+	uci set nikki.@rule[-1].type='GEOSITE'
+	uci set nikki.@rule[-1].matcher='tencent'
+	uci set nikki.@rule[-1].node='DIRECT'
+fi
+
+uci commit network 2>/dev/null
 uci commit firewall 2>/dev/null
 uci commit dhcp 2>/dev/null
 uci commit nikki 2>/dev/null
@@ -72,6 +114,6 @@ uci commit nikki 2>/dev/null
 # 首启防火墙已在运行; reload 让 flow_offloading=0 立即生效
 [ -x /sbin/fw4 ] && fw4 reload >/dev/null 2>&1
 
-echo "Applied proxy network tuning: flow_offloading=0, dns_redirect=0, min_cache_ttl=300, fast_reload=0" >>"$LOGFILE"
+echo "Applied proxy network tuning: flow_offloading=0, dns_redirect=0, min_cache_ttl=300, fast_reload=0, lan_pure_ipv4, nikki_ipv6_proxy=0, wechat_direct" >>"$LOGFILE"
 
 exit 0
