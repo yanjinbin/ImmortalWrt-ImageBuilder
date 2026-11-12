@@ -119,7 +119,7 @@ https://www.youtube.com/watch?v=7i6BQeitUtE
 - 该固件刷入【单网口设备】默认采用DHCP模式,自动获得ip。类似NAS的做法
 - 该固件刷入【多网口设备】默认WAN口采用DHCP模式，LAN 口ip为  `192.168.100.1` <br>其中eth0为WAN 其余网口均为LAN
 - 若用户在工作流中勾选了拨号信息 则WAN口模式为pppoe拨号模式。
-- 工作流默认 `enable_ipv6=no`；固件首启会在运行时配置中关闭 IPv6（WAN6 置为 none、LAN 关闭 RA/DHCPv6、禁用 odhcpd、fw4 开启 disable_ipv6），同时完整保留所有 IPv6 软件包。选择 `yes` 可保留完整 IPv6 网络支持。
+- Rockchip 25.12 工作流默认 `enable_ipv6=yes`：WAN 侧保留 IPv6（PPPoE 可拿到 IPv6 前缀，供路由器连接 IPv6 出站节点），LAN 侧由 `99-network-tuning.sh` 设为纯 IPv4（`delegate=0`、关闭 RA/DHCPv6/NDP，并加 `Reject-LAN-IPv6-egress` 防火墙规则）。若选 `no`，则是彻底的纯 IPv4 构建（WAN6 置为 none、禁用 odhcpd、fw4 `disable_ipv6`），此时无法连接 IPv6 节点。
 - 建议拨号用户使用之前重启一次光猫。
 - 综合上述特点，【单网口设备】应该先接路由器，先在上级路由器查看一下它的ip 再访问。
 - 上述特点 你都可以通过 `99-custom.sh` 配置和调整

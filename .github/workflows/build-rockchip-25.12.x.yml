@@ -169,8 +169,10 @@ on:
       enable_ipv6:
         description: |
           是否开启 IPv6 (WAN6 DHCPv6 / LAN RA / IPv6 防火墙)
+          默认 yes：WAN 侧 IPv6 必须保留，否则连不上 IPv6 出站节点；
+          局域网仍是纯 IPv4（由 99-network-tuning.sh 关闭 LAN RA/DHCPv6 并拒绝 LAN IPv6 出口）
         required: true
-        default: 'no'
+        default: 'yes'
         type: choice
         options:
           - 'yes'
