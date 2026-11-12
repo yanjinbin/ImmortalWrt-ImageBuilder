@@ -35,16 +35,32 @@ if uci -q get "nikki.procd" >/dev/null 2>&1; then
 	uci set nikki.procd.clear_connections_on_reload='1'
 fi
 
-# 5) 清空 mihomo DNS fallback: 订阅里的 DoT(tls://8.8.4.4、tls://1.1.1.1, 853 端口) 走代理
-#    节点时经常连不上, 实测 26 分钟内失败 564 次, 每次失败都拖慢对应域名的解析。
-#    分流已由 dns.nameserver-policy 承担, fallback 可以整体清空。
+# 5) 重写 mihomo DNS 剖析: 去掉 fallback, 统一国内/国外 DoH 分流
+#    - 订阅里的 fallback 用 DoT(tls://8.8.4.4、tls://1.1.1.1, 853), 走代理节点常失败,
+#      实测 26 分钟失败 564 次, 每次失败都要等超时, 解析时快时慢
+#    - fallback 的语义是"两套解析并发 + geoip 择一", 在"国内 + 代理"组合下纯属负担,
+#      分流交给 nameserver-policy 更直接
+#    - proxy-server-nameserver 去掉订阅里的第三方 DoH(实测 800ms, 国内 DoH 只要 140ms)
 MIXIN_FILE="/etc/nikki/mixin.yaml"
-if [ -f "$MIXIN_FILE" ] && ! grep -q "network-tuning: clear dns fallback" "$MIXIN_FILE"; then
+if [ -f "$MIXIN_FILE" ] && ! grep -q "network-tuning: dns profile" "$MIXIN_FILE"; then
 	cat >>"$MIXIN_FILE" <<'EOF'
 
-# network-tuning: clear dns fallback
+# network-tuning: dns profile
 dns:
   fallback: []
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  proxy-server-nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  nameserver-policy:
+    geosite:geolocation-!cn:
+      - https://1.1.1.1/dns-query
+      - https://8.8.8.8/dns-query
 EOF
 	uci set nikki.mixin.mixin_file_content='1'
 fi

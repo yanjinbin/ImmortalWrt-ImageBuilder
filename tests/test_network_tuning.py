@@ -35,11 +35,18 @@ class ProxyNetworkTuningTest(unittest.TestCase):
 
     def test_clears_dns_fallback_through_mixin(self):
         # DoT fallback keeps failing through the proxy node; nameserver-policy already splits.
-        self.assertIn("network-tuning: clear dns fallback", self.script)
+        self.assertIn("network-tuning: dns profile", self.script)
         self.assertIn("  fallback: []", self.script)
         self.assertIn("uci set nikki.mixin.mixin_file_content='1'", self.script)
         # appending must be idempotent
-        self.assertIn('! grep -q "network-tuning: clear dns fallback"', self.script)
+        self.assertIn('! grep -q "network-tuning: dns profile"', self.script)
+
+    def test_dns_profile_uses_domestic_servers_only(self):
+        self.assertIn("- 119.29.29.29", self.script)
+        self.assertIn("- https://doh.pub/dns-query", self.script)
+        self.assertIn("geosite:geolocation-!cn:", self.script)
+        # 第三方 DoH 实测 800ms，不再写进 proxy-server-nameserver
+        self.assertNotIn("sh.dns44.cn", self.script)
 
 
 if __name__ == "__main__":
