@@ -39,6 +39,16 @@ esac
 printf '%s\n' "$DEFAULT_THEME" > /home/build/immortalwrt/files/etc/luci-default-theme
 echo "默认主题预置为 ${DEFAULT_THEME}"
 
+# nikki 订阅预置: 地址来自 workflow 的 secrets.NIKKI_SUBSCRIPTION_URL (不写入仓库),
+# 首启由 files/etc/uci-defaults/98-nikki.sh 读入 uci 并设置开机启用。
+if [ -n "${NIKKI_SUBSCRIPTION_URL:-}" ]; then
+    printf '%s\n' "$NIKKI_SUBSCRIPTION_URL" > /home/build/immortalwrt/files/etc/nikki-subscription-url
+    chmod 600 /home/build/immortalwrt/files/etc/nikki-subscription-url
+    echo "已预置 nikki 订阅地址 (${#NIKKI_SUBSCRIPTION_URL} 字符)"
+else
+    echo "⚪️ 未提供 NIKKI_SUBSCRIPTION_URL, 固件只启用 nikki、不预置订阅"
+fi
+
 echo "Create pppoe-settings"
 mkdir -p  /home/build/immortalwrt/files/etc/config
 
@@ -157,7 +167,10 @@ if [ "${INCLUDE_GEOX:-yes}" = "yes" ]; then
     wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -O "$NIKKI_RUN_DIR/geoip.dat"
     wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O "$NIKKI_RUN_DIR/geosite.dat"
     wget -q --timeout=60 -t 3 "https://github.com/Loyalsoldier/geoip/releases/latest/download/Country.mmdb" -O "$NIKKI_RUN_DIR/country.mmdb"
-    for f in geoip.dat geosite.dat country.mmdb; do
+    # mihomo 1.19 的 geox-url 多了 asn 这一项 (GEOIP/ASN 规则用), 不预置会在首启联网抓 ~9MB。
+    # 与 mihomo 默认 geox-url.asn 同一个文件, 直接取 Loyalsoldier 的 release 分支。
+    wget -q --timeout=120 -t 3 "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite2-ASN.mmdb" -O "$NIKKI_RUN_DIR/ASN.mmdb"
+    for f in geoip.dat geosite.dat country.mmdb ASN.mmdb; do
         if [ ! -s "$NIKKI_RUN_DIR/$f" ]; then
             echo "错误: geox 数据集 $f 下载失败或为空, 终止构建"
             exit 1

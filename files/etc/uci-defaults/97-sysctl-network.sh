@@ -89,12 +89,13 @@ else
 	sed -i "/^net.ipv4.tcp_congestion_control=bbr$/d" /etc/sysctl.conf
 fi
 
-# RFS: 为每个 RX 队列开启流表, 让代理连接落在处理它的核上, 减少跨核抖动
+# RFS/RPS: 为每个 RX 队列开启流表并把软中断分发到多核 (代理连接落在处理它的核上, 减少跨核抖动)
 if uci -q get network.globals >/dev/null 2>&1; then
 	uci set network.globals.steering_flows='16384'
+	uci set network.globals.packet_steering='1'
 	uci commit network
 	[ -x /etc/init.d/packet_steering ] && /etc/init.d/packet_steering reload 2>/dev/null
-	echo "RFS 流表已开启 (steering_flows=16384)" >>"$LOGFILE"
+	echo "RPS/RFS 已开启 (packet_steering=1, steering_flows=16384)" >>"$LOGFILE"
 fi
 
 sysctl -p /etc/sysctl.conf >/dev/null 2>&1
