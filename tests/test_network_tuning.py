@@ -1,9 +1,13 @@
 from pathlib import Path
+import os
+import subprocess
+import tempfile
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 NETWORK_DEFAULTS = ROOT / "files/etc/uci-defaults/99-network-tuning.sh"
+SYSCTL_DEFAULTS = ROOT / "files/etc/uci-defaults/97-sysctl-network.sh"
 
 
 class ProxyNetworkTuningTest(unittest.TestCase):
@@ -32,11 +36,12 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         self.assertIn("uci set firewall.@rule[-1].dest='wan'", self.script)
 
     def test_disables_dnsmasq_redirect(self):
-        self.assertIn('.dns_redirect=\'0\'', self.script)
+        self.assertIn('.dns_redirect=0"', self.script)
         self.assertIn("uci commit dhcp", self.script)
 
-    def test_caps_dns_cache_ttl(self):
-        self.assertIn(".min_cache_ttl='300'", self.script)
+    def test_leaves_dnsmasq_cache_at_defaults(self):
+        # LAN 的 DNS 被 nikki 劫持到 mihomo，dnsmasq 缓存参数对终端无影响。
+        self.assertNotIn("min_cache_ttl", self.script)
 
     def test_clears_stale_connections_on_reload(self):
         self.assertIn("uci set nikki.procd.fast_reload='0'", self.script)
@@ -54,9 +59,9 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         # 局域网终端纯 IPv4 出口，避免双栈 Happy Eyeballs 黑洞
         self.assertIn("uci -q delete network.lan.ip6assign", self.script)
         self.assertIn("uci set network.lan.delegate='0'", self.script)
-        self.assertIn("uci set \"dhcp.${section}.ra='disabled'\"", self.script)
-        self.assertIn("uci set \"dhcp.${section}.dhcpv6='disabled'\"", self.script)
-        self.assertIn("uci set \"dhcp.${section}.ndp='disabled'\"", self.script)
+        self.assertIn('uci set "dhcp.${section}.ra=disabled"', self.script)
+        self.assertIn('uci set "dhcp.${section}.dhcpv6=disabled"', self.script)
+        self.assertIn('uci set "dhcp.${section}.ndp=disabled"', self.script)
         self.assertIn("uci commit network", self.script)
 
     def test_disables_nikki_lan_ipv6_proxy_but_keeps_dns_hijack(self):
@@ -74,6 +79,78 @@ class ProxyNetworkTuningTest(unittest.TestCase):
     def test_cleans_up_legacy_geosite_rules(self):
         self.assertIn("wechat|tencent)", self.script)
         self.assertIn('uci -q delete "nikki.${sec}"', self.script)
+
+
+FAKE_UCI = """#!/bin/sh
+[ "$1" = "-q" ] && shift
+case "$1" in
+get) [ "$2" = "dhcp.lan.interface" ] && echo lan ;;
+show) [ "$2" = "dhcp" ] && printf 'dhcp.cfg01=dnsmasq\\ndhcp.lan=dhcp\\n' ;;
+set) echo "$2" >>"$UCI_LOG" ;;
+esac
+exit 0
+"""
+
+
+class ProxyNetworkTuningBehaviourTest(unittest.TestCase):
+    """Run the script with a fake uci and check the values it writes."""
+
+    def test_writes_unquoted_dhcp_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "uci").write_text(FAKE_UCI)
+            (root / "uci").chmod(0o755)
+            log = root / "uci.log"
+            script = root / "tuning.sh"
+            script.write_text(NETWORK_DEFAULTS.read_text(encoding="utf-8").replace(
+                "/etc/config/uci-defaults-log.txt", str(root / "defaults.log")))
+            env = {**os.environ, "PATH": f"{root}:{os.environ['PATH']}", "UCI_LOG": str(log)}
+            subprocess.run(["sh", str(script)], env=env, check=True)
+            written = log.read_text().splitlines()
+
+        for entry in (
+            "dhcp.cfg01.dns_redirect=0",
+            "dhcp.lan.ra=disabled",
+            "dhcp.lan.dhcpv6=disabled",
+            "dhcp.lan.ndp=disabled",
+        ):
+            self.assertIn(entry, written)
+        # Quotes inside a double-quoted argument become part of the uci value.
+        self.assertFalse([w for w in written if w.startswith("dhcp.") and "'" in w], written)
+
+
+class SysctlBaselineTest(unittest.TestCase):
+    """sysctl 只保留对 TPROXY + mihomo 本机中转有明确作用的项。"""
+
+    def setUp(self):
+        self.script = SYSCTL_DEFAULTS.read_text(encoding="utf-8")
+
+    def test_keeps_the_essential_keys(self):
+        for key in (
+            "net.core.rmem_max=33554432",
+            "net.core.wmem_max=33554432",
+            "net.ipv4.tcp_mtu_probing=1",
+            "net.ipv4.tcp_slow_start_after_idle=0",
+            "net.ipv4.tcp_congestion_control=bbr",
+        ):
+            self.assertIn(key, self.script)
+
+    def test_drops_keys_without_a_clear_benefit(self):
+        for key in (
+            "tcp_tw_reuse",
+            "tcp_fastopen",
+            "tcp_notsent_lowat",
+            "tcp_keepalive",
+            "nf_conntrack",
+            "ipfrag",
+            "gc_thresh",
+            "vm.",
+        ):
+            self.assertNotIn(key, self.script)
+
+    def test_removes_the_block_written_by_older_firmware(self):
+        self.assertIn("codex network tuning", self.script)
+        self.assertIn("# >>> network baseline >>>", self.script)
 
 
 if __name__ == "__main__":

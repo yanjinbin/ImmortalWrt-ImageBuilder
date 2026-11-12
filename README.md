@@ -39,7 +39,7 @@
 **已集成插件/主题**：
 - 代理：nikki + luci-app-nikki（来源：`yanjinbin/OpenWrt-nikki` fork，默认固定为 `prebuilt-aarch64-25.12-4b8b630`，支持按星期和时间更新订阅、代理组定时切换；也可选择 latest 或其他 release tag）+ mihomo（不编译，工作流直接从 [MetaCubeX/mihomo releases](https://github.com/MetaCubeX/mihomo/releases) 下载所选版本/平台的预编译二进制写入固件）
 - 代理：Momo v1.2.1（`nikkinikki-org/OpenWrt-momo` 官方 25.12 APK）+ sing-box（ImmortalWrt 软件源），默认关闭，与 Nikki 按需择一启用
-- 透明代理网络基线：首启由 `files/etc/uci-defaults/99-network-tuning.sh` 写入（仅当镜像装了 nikki）。原则是**分流/策略组/节点/DNS 全部由 aliyun 订阅模板提供，固件只做系统层**：① 防火墙开启软件 `flow_offloading=1`、保持 `flow_offloading_hw=0`（TPROXY 命中的流量走本地协议栈不进 forward，软件卸载不影响代理；硬件卸载会绕过 netfilter）；② 新增 `Reject-LAN-IPv6-egress` 规则（lan→wan，family ipv6，REJECT），只拦终端 IPv6 出口，路由器自身连 IPv6 节点不受影响；③ LAN 纯 IPv4：`delegate=0`、删除 `ip6assign`、关闭 RA/DHCPv6/NDP；④ nikki `ipv6_proxy=0` 但保留 `ipv6_dns_hijack=1`（不劫持 IPv6 DNS 会被 ISP 投毒，表现为网站时好时坏）；⑤ dnsmasq `dns_redirect=0`、`min_cache_ttl=300`；⑥ `nikki.procd.fast_reload=0` + `clear_connections_on_reload=1`；⑦ 清理历史遗留的 `GEOSITE,wechat` / `GEOSITE,tencent` 自定义规则（MetaCubeX 的 geosite.dat 没有这两个分类，写了会导致配置校验失败、内核起不来）和旧的 mixin DNS 覆盖块。微信/腾讯直连由订阅里的 `RULE-SET,tencent` 负责，固件不再重复注入规则。
+- 透明代理网络基线：首启由 `files/etc/uci-defaults/99-network-tuning.sh` 写入（仅当镜像装了 nikki）。原则是**分流/策略组/节点/DNS 全部由 aliyun 订阅模板提供，固件只做系统层**：① 防火墙开启软件 `flow_offloading=1`、保持 `flow_offloading_hw=0`（TPROXY 命中的流量走本地协议栈不进 forward，软件卸载不影响代理；硬件卸载会绕过 netfilter）；② 新增 `Reject-LAN-IPv6-egress` 规则（lan→wan，family ipv6，REJECT），只拦终端 IPv6 出口，路由器自身连 IPv6 节点不受影响；③ LAN 纯 IPv4：`delegate=0`、删除 `ip6assign`、关闭 RA/DHCPv6/NDP；④ nikki `ipv6_proxy=0` 但保留 `ipv6_dns_hijack=1`（不劫持 IPv6 DNS 会被 ISP 投毒，表现为网站时好时坏）；⑤ dnsmasq `dns_redirect=0`（LAN 的 DNS 全部被 nikki 劫持到 mihomo，dnsmasq 缓存参数对终端无影响，不再调整）；⑥ `nikki.procd.fast_reload=0` + `clear_connections_on_reload=1`；⑦ 清理历史遗留的 `GEOSITE,wechat` / `GEOSITE,tencent` 自定义规则（MetaCubeX 的 geosite.dat 没有这两个分类，写了会导致配置校验失败、内核起不来）和旧的 mixin DNS 覆盖块。微信/腾讯直连由订阅里的 `RULE-SET,tencent` 负责，固件不再重复注入规则。
 - 游戏加速：luci-app-uugamebooster 1.1-r2（`lmq8267` 原版 APK 已[归档到仓库](packages/README.md)，构建时校验 SHA256 并修复离线安装脚本），默认关闭，启用时从网易下载 UU 二进制；已补齐 luci-compat 与 kmod-tun
 - 主题：luci-theme-openwrt（官方仓库）、luci-theme-uniwrt（`yanjinbin/uniwrt-luci`）、luci-theme-footstrap（`yanjinbin/luci-theme-footstrap`，保留内置壁纸，默认主题已改为 Vantage）；另预装上游 Release 主题 7Dollar（`itsmaiGe/luci-theme-7dollar`）、Aeris（`wizcheu/luci-theme-aeris`）、Vantage（`anothaDev/luci-theme-vantage` + 中文语言包），并预装 Vantage 面板插件 `luci-app-vantage` + 中文语言包（登录后首页为实时网络面板），构建时按 SHA256 校验；已移除 argon
 - Footstrap 壁纸保护：官方 feeds 的同名包与 fork 预编译包版本号相同、但只有 fork 包带内置壁纸；而 `PACKAGES="pkg=版本"` 这种锁定方式会被 ImageBuilder 的 `FormatPackages` 泄漏成后续所有包的约束（`package_install` exit 99，实测踩过）。因此构建时用 `shell/repin-footstrap.py` 把 fork 包重打包为 `-r2` 版本（顺带校验包内有 `wallpapers/cats.svg`、`wallpapers/dinos.svg`），并把本地 `packages/` 仓库置顶；构建后再校验固件 manifest 的版本，任一不满足直接失败
@@ -62,7 +62,7 @@
 
 **mihomo 版本/平台**：工作流 UI 支持选择或填写 mihomo 版本（默认 `1.19.34`，可选 `latest` 最新版或自定义版本号）和平台（默认 `arm64`，覆盖 R5C / R6S / E20C；可选 `amd64`、`armv7` 等或自定义）。
 
-构建完成后固件自动发布到**独立 Release 页面**（每次构建单独 tag：`Autobuild-<run>`），说明内容按本次构建参数（设备 / LAN IP / mihomo 版本 / 固件空间等）动态生成，可直接下载 `*.img.gz`。
+构建完成后固件自动发布到**独立 draft Release 页面**（每次构建单独 tag：`Autobuild-<run>`），说明内容按本次构建参数（设备 / LAN IP / mihomo 版本 / 固件空间等）动态生成。固件内置订阅地址（含令牌）和 PPPoE 凭据，所以 Release 只对仓库成员可见，用 `gh release download Autobuild-<run>-1 -p '*.img.gz'` 下载。
 
 ## [基本用法步骤](https://github.com/wukongdaily/AutoBuildImmortalWrt/wiki) 👈🏻
 1、fork本项目<br>

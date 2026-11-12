@@ -26,6 +26,10 @@ class NikkiPresetTest(unittest.TestCase):
     def test_workflow_passes_the_secret(self):
         self.assertIn('-e NIKKI_SUBSCRIPTION_URL="${{ secrets.NIKKI_SUBSCRIPTION_URL }}"', self.workflow)
 
+    def test_release_is_a_draft(self):
+        # The image carries the subscription token; a public release would leak it.
+        self.assertIn("draft: true", self.workflow)
+
     def test_no_subscription_url_is_committed(self):
         # The bearer token must not live in the repository.
         for path in (BUILD_SCRIPT, WORKFLOW, NIKKI_DEFAULTS):
