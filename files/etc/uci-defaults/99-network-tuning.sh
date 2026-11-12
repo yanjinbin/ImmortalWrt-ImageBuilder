@@ -13,7 +13,8 @@
 # 3) 防火墙：软件 flow offloading 开启（被 TPROXY 命中的流量走本地协议栈，
 #    不进 forward，不受卸载影响），硬件 offloading 保持关闭（会绕过 netfilter）。
 #    另加一条 lan→wan 的 IPv6 REJECT，兜住终端里残留的旧 v6 地址。
-# 4) dnsmasq：dns_redirect=0（与 nikki 的 dport 53 -> :1053 劫持重复）、min_cache_ttl=300。
+# 4) dnsmasq：dns_redirect=0（与 nikki 的 dport 53 -> :1053 劫持重复）。
+#    LAN 的 DNS 全部被 nikki 劫持到 mihomo，dnsmasq 的缓存参数对终端无影响，不再调整。
 # 5) nikki fast_reload=0 + clear_connections_on_reload=1，重载时断开僵尸连接。
 # 6) 清理历史遗留：老固件写过的 GEOSITE,wechat / GEOSITE,tencent 自定义规则会让
 #    配置校验直接失败（MetaCubeX 的 geosite.dat 没有这两个分类，内核起不来），
@@ -45,10 +46,9 @@ if ! uci -q show firewall | grep -q "name='Reject-LAN-IPv6-egress'"; then
 	uci set firewall.@rule[-1].target='REJECT'
 fi
 
-# --- 3) dnsmasq：去掉重复劫持，压低缓存 TTL ---
+# --- 3) dnsmasq：去掉重复劫持 ---
 for section in $(uci -q show dhcp | sed -n 's/^dhcp\.\([^.=]*\)=dnsmasq$/\1/p'); do
 	uci set "dhcp.${section}.dns_redirect='0'"
-	uci set "dhcp.${section}.min_cache_ttl='300'"
 done
 
 # --- 4) nikki 重载行为 ---
@@ -103,6 +103,6 @@ uci commit nikki 2>/dev/null
 
 [ -x /sbin/fw4 ] && fw4 reload >/dev/null 2>&1
 
-echo "Applied system network baseline: flow_offloading=1/hw=0, lan_pure_ipv4, reject_lan_ipv6, ipv6_proxy=0, ipv6_dns_hijack=1, dns_redirect=0, min_cache_ttl=300, fast_reload=0" >>"$LOGFILE"
+echo "Applied system network baseline: flow_offloading=1/hw=0, lan_pure_ipv4, reject_lan_ipv6, ipv6_proxy=0, ipv6_dns_hijack=1, dns_redirect=0, fast_reload=0" >>"$LOGFILE"
 
 exit 0

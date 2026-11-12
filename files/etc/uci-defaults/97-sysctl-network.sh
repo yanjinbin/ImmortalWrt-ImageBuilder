@@ -1,7 +1,11 @@
 #!/bin/sh
-# 内核网络优化 (sysctl): 仅 rockchip/armv8 系列 (R5C / E20C / R6S 等 ARM 软路由)
-# 参数与 2026-10 E20C 实测调优一致: 32MB 收发缓冲 + 软中断积压 + conntrack + RFS + BBR
-# BBR 依赖 kmod-tcp-bbr, 通过 /etc/modules.d 保证开机自动加载
+# 内核网络基线 (sysctl): 仅 rockchip/armv8 系列 (R5C / E20C / R6S 等 ARM 软路由)
+# 只保留对「TPROXY + mihomo 本机中转」有明确作用的项, 其余一律用系统默认值:
+#   - 收发缓冲上限: quic-go (hysteria2 / tuic) 需要 >= 7MB 的 UDP 缓冲, TCP 自动调优上限同步放宽
+#   - tcp_mtu_probing: PPPoE (MTU 1492) 下的 PMTUD 黑洞兜底
+#   - tcp_slow_start_after_idle=0: 代理长连接空闲后不重新慢启动
+#   - netdev_max_backlog / RFS: 2.5G 突发时的软中断积压与多核分发
+#   - BBR: 本机到代理节点的上行拥塞控制 (依赖 kmod-tcp-bbr, 经 /etc/modules.d 开机加载)
 # 写入 /etc/sysctl.conf 并立即生效; 使用标记块整体替换, 幂等防堆叠
 LOGFILE="/etc/config/uci-defaults-log.txt"
 
@@ -14,68 +18,30 @@ case "$target" in
 		;;
 esac
 
-BLOCK_START="# >>> codex network tuning >>>"
-BLOCK_END="# <<< codex network tuning <<<"
+BLOCK_START="# >>> network baseline >>>"
+BLOCK_END="# <<< network baseline <<<"
 
-# 删除旧标记块, 防止重复堆叠
+# 删除旧标记块 (含老固件写入的 codex 标记块), 防止重复堆叠
 sed -i "/^${BLOCK_START}$/,/^${BLOCK_END}$/d" /etc/sysctl.conf
+sed -i "/^# >>> codex network tuning >>>$/,/^# <<< codex network tuning <<<$/d" /etc/sysctl.conf
 
 cat >> /etc/sysctl.conf <<'EOF'
-# >>> codex network tuning >>>
-# 软中断队列 / 收发批量 (缓解 RX backlog drop)
-net.core.netdev_max_backlog=16384
-net.core.netdev_budget=600
-net.core.netdev_budget_usecs=8000
-net.core.somaxconn=8192
-net.core.optmem_max=262144
-# RFS 流表 (需配合 network.globals.steering_flows)
-net.core.rps_sock_flow_entries=32768
-# 收发缓冲 (4G 内存富余, 上限 32MB)
+# >>> network baseline >>>
+# 收发缓冲上限 (quic-go 需要 >= 7MB UDP 缓冲; TCP 自动调优上限)
 net.core.rmem_max=33554432
 net.core.wmem_max=33554432
 net.ipv4.tcp_rmem=4096 131072 33554432
 net.ipv4.tcp_wmem=4096 65536 33554432
-net.ipv4.tcp_mem=65536 131072 262144
-net.ipv4.udp_rmem_min=16384
-net.ipv4.udp_wmem_min=16384
-# TCP 吞吐/时延 (PPPoE MTU 1492, 代理长连接)
+# PPPoE MTU 1492: PMTUD 黑洞兜底
 net.ipv4.tcp_mtu_probing=1
-net.ipv4.tcp_fastopen=3
+# 代理长连接空闲后保持拥塞窗口
 net.ipv4.tcp_slow_start_after_idle=0
-net.ipv4.tcp_no_metrics_save=1
-net.ipv4.tcp_autocorking=0
-net.ipv4.tcp_max_syn_backlog=8192
-net.ipv4.tcp_max_tw_buckets=65536
-net.ipv4.tcp_fin_timeout=15
-net.ipv4.tcp_tw_reuse=2
-net.ipv4.tcp_keepalive_time=300
-net.ipv4.tcp_keepalive_intvl=30
-net.ipv4.tcp_keepalive_probes=5
-net.ipv4.tcp_notsent_lowat=4194304
-net.ipv4.ip_local_port_range=10240 65535
-# 邻居表 (默认 128/512/1024 偏小)
-net.ipv4.neigh.default.gc_thresh1=1024
-net.ipv4.neigh.default.gc_thresh2=2048
-net.ipv4.neigh.default.gc_thresh3=4096
-# IPv4 分片重组 (默认仅 4MB)
-net.ipv4.ipfrag_high_thresh=16777216
-net.ipv4.ipfrag_low_thresh=12582912
-net.ipv4.ipfrag_time=30
-# netfilter 连接跟踪 (fullcone + UDP/QUIC 代理)
-net.netfilter.nf_conntrack_max=131072
-net.netfilter.nf_conntrack_tcp_timeout_established=7200
-net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
-net.netfilter.nf_conntrack_udp_timeout=30
-net.netfilter.nf_conntrack_udp_timeout_stream=120
-# 内存回写 / 回收 (无 swap)
-vm.swappiness=10
-vm.min_free_kbytes=32768
-vm.dirty_ratio=10
-vm.dirty_background_ratio=5
-vm.vfs_cache_pressure=50
+# 软中断积压 / RFS 流表 (需配合 network.globals.steering_flows)
+net.core.netdev_max_backlog=16384
+net.core.rps_sock_flow_entries=32768
 # BBR 拥塞控制 (fq_codel qdisc 兼容; fq 未内建于该内核)
 net.ipv4.tcp_congestion_control=bbr
-# <<< codex network tuning <<<
+# <<< network baseline <<<
 EOF
 
 # BBR: 加载 kmod-tcp-bbr 并固化开机加载 (模块由构建时 PACKAGES 引入)

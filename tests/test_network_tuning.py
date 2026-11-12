@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 NETWORK_DEFAULTS = ROOT / "files/etc/uci-defaults/99-network-tuning.sh"
+SYSCTL_DEFAULTS = ROOT / "files/etc/uci-defaults/97-sysctl-network.sh"
 
 
 class ProxyNetworkTuningTest(unittest.TestCase):
@@ -35,8 +36,9 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         self.assertIn('.dns_redirect=\'0\'', self.script)
         self.assertIn("uci commit dhcp", self.script)
 
-    def test_caps_dns_cache_ttl(self):
-        self.assertIn(".min_cache_ttl='300'", self.script)
+    def test_leaves_dnsmasq_cache_at_defaults(self):
+        # LAN 的 DNS 被 nikki 劫持到 mihomo，dnsmasq 缓存参数对终端无影响。
+        self.assertNotIn("min_cache_ttl", self.script)
 
     def test_clears_stale_connections_on_reload(self):
         self.assertIn("uci set nikki.procd.fast_reload='0'", self.script)
@@ -74,6 +76,40 @@ class ProxyNetworkTuningTest(unittest.TestCase):
     def test_cleans_up_legacy_geosite_rules(self):
         self.assertIn("wechat|tencent)", self.script)
         self.assertIn('uci -q delete "nikki.${sec}"', self.script)
+
+
+class SysctlBaselineTest(unittest.TestCase):
+    """sysctl 只保留对 TPROXY + mihomo 本机中转有明确作用的项。"""
+
+    def setUp(self):
+        self.script = SYSCTL_DEFAULTS.read_text(encoding="utf-8")
+
+    def test_keeps_the_essential_keys(self):
+        for key in (
+            "net.core.rmem_max=33554432",
+            "net.core.wmem_max=33554432",
+            "net.ipv4.tcp_mtu_probing=1",
+            "net.ipv4.tcp_slow_start_after_idle=0",
+            "net.ipv4.tcp_congestion_control=bbr",
+        ):
+            self.assertIn(key, self.script)
+
+    def test_drops_keys_without_a_clear_benefit(self):
+        for key in (
+            "tcp_tw_reuse",
+            "tcp_fastopen",
+            "tcp_notsent_lowat",
+            "tcp_keepalive",
+            "nf_conntrack",
+            "ipfrag",
+            "gc_thresh",
+            "vm.",
+        ):
+            self.assertNotIn(key, self.script)
+
+    def test_removes_the_block_written_by_older_firmware(self):
+        self.assertIn("codex network tuning", self.script)
+        self.assertIn("# >>> network baseline >>>", self.script)
 
 
 if __name__ == "__main__":
