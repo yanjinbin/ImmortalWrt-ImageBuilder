@@ -48,7 +48,7 @@ fi
 
 # --- 3) dnsmasq：去掉重复劫持 ---
 for section in $(uci -q show dhcp | sed -n 's/^dhcp\.\([^.=]*\)=dnsmasq$/\1/p'); do
-	uci set "dhcp.${section}.dns_redirect='0'"
+	uci set "dhcp.${section}.dns_redirect=0"
 done
 
 # --- 4) nikki 重载行为 ---
@@ -65,9 +65,9 @@ fi
 
 for section in $(uci -q show dhcp | sed -n 's/^dhcp\.\([^.=]*\)=dhcp$/\1/p'); do
 	if [ "$(uci -q get "dhcp.${section}.interface")" = "lan" ]; then
-		uci set "dhcp.${section}.ra='disabled'"
-		uci set "dhcp.${section}.dhcpv6='disabled'"
-		uci set "dhcp.${section}.ndp='disabled'"
+		uci set "dhcp.${section}.ra=disabled"
+		uci set "dhcp.${section}.dhcpv6=disabled"
+		uci set "dhcp.${section}.ndp=disabled"
 	fi
 done
 

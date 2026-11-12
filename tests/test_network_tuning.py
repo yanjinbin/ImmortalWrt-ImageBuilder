@@ -1,4 +1,7 @@
 from pathlib import Path
+import os
+import subprocess
+import tempfile
 import unittest
 
 
@@ -33,7 +36,7 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         self.assertIn("uci set firewall.@rule[-1].dest='wan'", self.script)
 
     def test_disables_dnsmasq_redirect(self):
-        self.assertIn('.dns_redirect=\'0\'', self.script)
+        self.assertIn('.dns_redirect=0"', self.script)
         self.assertIn("uci commit dhcp", self.script)
 
     def test_leaves_dnsmasq_cache_at_defaults(self):
@@ -56,9 +59,9 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         # 局域网终端纯 IPv4 出口，避免双栈 Happy Eyeballs 黑洞
         self.assertIn("uci -q delete network.lan.ip6assign", self.script)
         self.assertIn("uci set network.lan.delegate='0'", self.script)
-        self.assertIn("uci set \"dhcp.${section}.ra='disabled'\"", self.script)
-        self.assertIn("uci set \"dhcp.${section}.dhcpv6='disabled'\"", self.script)
-        self.assertIn("uci set \"dhcp.${section}.ndp='disabled'\"", self.script)
+        self.assertIn('uci set "dhcp.${section}.ra=disabled"', self.script)
+        self.assertIn('uci set "dhcp.${section}.dhcpv6=disabled"', self.script)
+        self.assertIn('uci set "dhcp.${section}.ndp=disabled"', self.script)
         self.assertIn("uci commit network", self.script)
 
     def test_disables_nikki_lan_ipv6_proxy_but_keeps_dns_hijack(self):
@@ -76,6 +79,44 @@ class ProxyNetworkTuningTest(unittest.TestCase):
     def test_cleans_up_legacy_geosite_rules(self):
         self.assertIn("wechat|tencent)", self.script)
         self.assertIn('uci -q delete "nikki.${sec}"', self.script)
+
+
+FAKE_UCI = """#!/bin/sh
+[ "$1" = "-q" ] && shift
+case "$1" in
+get) [ "$2" = "dhcp.lan.interface" ] && echo lan ;;
+show) [ "$2" = "dhcp" ] && printf 'dhcp.cfg01=dnsmasq\\ndhcp.lan=dhcp\\n' ;;
+set) echo "$2" >>"$UCI_LOG" ;;
+esac
+exit 0
+"""
+
+
+class ProxyNetworkTuningBehaviourTest(unittest.TestCase):
+    """Run the script with a fake uci and check the values it writes."""
+
+    def test_writes_unquoted_dhcp_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "uci").write_text(FAKE_UCI)
+            (root / "uci").chmod(0o755)
+            log = root / "uci.log"
+            script = root / "tuning.sh"
+            script.write_text(NETWORK_DEFAULTS.read_text(encoding="utf-8").replace(
+                "/etc/config/uci-defaults-log.txt", str(root / "defaults.log")))
+            env = {**os.environ, "PATH": f"{root}:{os.environ['PATH']}", "UCI_LOG": str(log)}
+            subprocess.run(["sh", str(script)], env=env, check=True)
+            written = log.read_text().splitlines()
+
+        for entry in (
+            "dhcp.cfg01.dns_redirect=0",
+            "dhcp.lan.ra=disabled",
+            "dhcp.lan.dhcpv6=disabled",
+            "dhcp.lan.ndp=disabled",
+        ):
+            self.assertIn(entry, written)
+        # Quotes inside a double-quoted argument become part of the uci value.
+        self.assertFalse([w for w in written if w.startswith("dhcp.") and "'" in w], written)
 
 
 class SysctlBaselineTest(unittest.TestCase):
