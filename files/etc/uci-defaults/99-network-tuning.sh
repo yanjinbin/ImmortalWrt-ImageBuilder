@@ -35,6 +35,20 @@ if uci -q get "nikki.procd" >/dev/null 2>&1; then
 	uci set nikki.procd.clear_connections_on_reload='1'
 fi
 
+# 5) 清空 mihomo DNS fallback: 订阅里的 DoT(tls://8.8.4.4、tls://1.1.1.1, 853 端口) 走代理
+#    节点时经常连不上, 实测 26 分钟内失败 564 次, 每次失败都拖慢对应域名的解析。
+#    分流已由 dns.nameserver-policy 承担, fallback 可以整体清空。
+MIXIN_FILE="/etc/nikki/mixin.yaml"
+if [ -f "$MIXIN_FILE" ] && ! grep -q "network-tuning: clear dns fallback" "$MIXIN_FILE"; then
+	cat >>"$MIXIN_FILE" <<'EOF'
+
+# network-tuning: clear dns fallback
+dns:
+  fallback: []
+EOF
+	uci set nikki.mixin.mixin_file_content='1'
+fi
+
 uci commit firewall 2>/dev/null
 uci commit dhcp 2>/dev/null
 uci commit nikki 2>/dev/null

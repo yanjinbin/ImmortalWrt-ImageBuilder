@@ -33,6 +33,14 @@ class ProxyNetworkTuningTest(unittest.TestCase):
         self.assertIn("uci set nikki.procd.fast_reload='0'", self.script)
         self.assertIn("uci set nikki.procd.clear_connections_on_reload='1'", self.script)
 
+    def test_clears_dns_fallback_through_mixin(self):
+        # DoT fallback keeps failing through the proxy node; nameserver-policy already splits.
+        self.assertIn("network-tuning: clear dns fallback", self.script)
+        self.assertIn("  fallback: []", self.script)
+        self.assertIn("uci set nikki.mixin.mixin_file_content='1'", self.script)
+        # appending must be idempotent
+        self.assertIn('! grep -q "network-tuning: clear dns fallback"', self.script)
+
 
 if __name__ == "__main__":
     unittest.main()
