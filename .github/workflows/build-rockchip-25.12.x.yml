@@ -635,9 +635,12 @@ jobs:
           echo "已生成 Release 说明:"
           cat "$BODY"
 
-      - name: 发布固件到独立 Release (每次构建单独页面)
+      # 固件内置订阅地址 (含令牌) 与 PPPoE 凭据, 而本仓库是公开仓库:
+      # Release 一律以 draft 发布, 只有仓库成员可见、可下载。
+      - name: 发布固件到独立 Release (每次构建单独页面, draft)
         uses: softprops/action-gh-release@v3
         with:
+          draft: true
           tag_name: Autobuild-${{ github.run_id }}-${{ github.run_attempt }}
           name: "ImmortalWrt Rockchip ${{ env.DEV_NAME }} (${{ inputs.luci_version }})"
           body_path: ${{ github.workspace }}/release-body.md
