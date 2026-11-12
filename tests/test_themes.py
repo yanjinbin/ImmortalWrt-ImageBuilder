@@ -211,5 +211,58 @@ class FootstrapRepinTest(unittest.TestCase):
         self.assertNotIn("installed-size:", joined)
 
 
+class FootstrapRepinCliTest(unittest.TestCase):
+    """The shell wrapper reads the last stdout line as the produced APK path."""
+
+    def test_child_noise_does_not_pollute_the_output_path(self):
+        import json
+        import os
+
+        script = ROOT / "shell/repin-footstrap.py"
+        meta = {
+            "info": {
+                "name": "luci-theme-footstrap",
+                "version": "26.315.53617~9ec99c3",
+                "arch": "noarch",
+                "depends": ["libc", "luci-base"],
+            },
+            "scripts": {"post-install": "#!/bin/sh\nexit 0\n"},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            (tmp / "meta.json").write_text(json.dumps(meta))
+            fake = tmp / "apk"
+            fake.write_text(
+                "#!/bin/sh\n"
+                'cmd="$1"; shift\n'
+                'case "$cmd" in\n'
+                '  adbdump) cat "$FAKE_META" ;;\n'
+                "  extract)\n"
+                '    dest=""\n'
+                '    while [ $# -gt 0 ]; do case "$1" in --destination) dest="$2"; shift 2;; *) shift;; esac; done\n'
+                '    mkdir -p "$dest/www/luci-static/footstrap/wallpapers"\n'
+                '    : > "$dest/www/luci-static/footstrap/wallpapers/cats.svg"\n'
+                '    : > "$dest/www/luci-static/footstrap/wallpapers/dinos.svg"\n'
+                "    echo 'extracting...' ;;\n"
+                "  mkpkg)\n"
+                '    out=""\n'
+                '    while [ $# -gt 0 ]; do case "$1" in --output) out="$2"; shift 2;; *) shift;; esac; done\n'
+                '    echo "mkpkg progress noise"\n'
+                '    echo pkg > "$out" ;;\n'
+                "esac\n"
+            )
+            fake.chmod(0o755)
+            (tmp / "src.apk").write_bytes(b"x")
+            env = dict(os.environ, FAKE_META=str(tmp / "meta.json"))
+            result = subprocess.run(
+                ["python3", str(script), str(fake), str(tmp / "src.apk"), str(tmp / "out")],
+                check=True, capture_output=True, text=True, env=env)
+            lines = result.stdout.strip().splitlines()
+            self.assertEqual(len(lines), 1, result.stdout)
+            produced = Path(lines[0])
+            self.assertTrue(produced.is_file())
+            self.assertTrue(produced.name.endswith("-r2.apk"))
+
+
 if __name__ == "__main__":
     unittest.main()

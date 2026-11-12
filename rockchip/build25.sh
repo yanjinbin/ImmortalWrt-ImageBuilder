@@ -119,14 +119,20 @@ if [ ! -x "$APK_HOST_BIN" ]; then
 fi
 
 # 重打包同时校验 APK 内确实带 www/luci-static/footstrap/wallpapers/{cats,dinos}.svg
-if ! REPIN_APK="$(python3 shell/repin-footstrap.py "$APK_HOST_BIN" "$FOOTSTRAP_THEME_APK" /tmp/footstrap-repin)"; then
+REPIN_LOG="/tmp/footstrap-repin.log"
+if ! python3 shell/repin-footstrap.py "$APK_HOST_BIN" "$FOOTSTRAP_THEME_APK" /tmp/footstrap-repin > "$REPIN_LOG" 2>&1; then
     echo "错误: footstrap 重打包失败 (缺少 cats/dinos 壁纸或 mkpkg 不可用), 终止构建"
+    tail -n 30 "$REPIN_LOG"
     exit 1
 fi
-[ -s "$REPIN_APK" ] || {
-    echo "错误: footstrap 重打包没有产物, 终止构建"
+tail -n 5 "$REPIN_LOG"
+# 脚本最后一行是产物路径; 取末行, 避免 apk 的进度输出混进变量
+REPIN_APK="$(tail -n 1 "$REPIN_LOG")"
+if [ ! -s "$REPIN_APK" ]; then
+    echo "错误: footstrap 重打包没有产物 (期望: $REPIN_APK), 终止构建"
+    ls -la /tmp/footstrap-repin 2>/dev/null || true
     exit 1
-}
+fi
 
 rm -f "$FOOTSTRAP_THEME_APK"
 cp -f "$REPIN_APK" /home/build/immortalwrt/packages/

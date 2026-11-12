@@ -69,8 +69,10 @@ def main(apk, source, output_dir):
     with tempfile.TemporaryDirectory(prefix="footstrap-repin-") as tmp:
         root = Path(tmp, "root")
         root.mkdir()
+        # Child stdout is redirected to stderr: apk may print progress, and the
+        # caller reads our last stdout line as the output path.
         subprocess.run([apk, "extract", "--allow-untrusted", "--destination",
-                        str(root), str(source)], check=True)
+                        str(root), str(source)], check=True, stdout=sys.stderr)
 
         wallpapers = root / "www/luci-static/footstrap/wallpapers"
         missing = [name for name in ("cats.svg", "dinos.svg")
@@ -85,7 +87,7 @@ def main(apk, source, output_dir):
         command += script_arguments(metadata.get("scripts", {}), tmp)
         for trigger in metadata.get("triggers") or []:
             command += ["--trigger", trigger]
-        subprocess.run(command, check=True)
+        subprocess.run(command, check=True, stdout=sys.stderr)
 
     print(output)
 
