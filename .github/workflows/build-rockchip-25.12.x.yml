@@ -597,9 +597,14 @@ jobs:
             echo "- 固件空间: ${{ inputs.rootfs_partsize }}"
             echo "- Docker: ${{ inputs.include_docker }}"
             echo "- PPPoE: ${{ inputs.enable_pppoe }}"
-            if [[ "${{ inputs.enable_pppoe }}" == "yes" ]] && \
-               [[ -z "$(jq -r '.inputs.pppoe_account // ""' "$GITHUB_EVENT_PATH")" ]]; then
-              echo "- PPPoE 凭据: 未内置；刷机后填写账号密码或恢复网络配置"
+            if [[ "${{ inputs.enable_pppoe }}" == "yes" ]]; then
+              # 凭据只回显账号前 4 位，密码一律不写进 Release 说明
+              pppoe_account=$(jq -r '.inputs.pppoe_account // ""' "$GITHUB_EVENT_PATH")
+              if [[ -z "$pppoe_account" ]]; then
+                echo "- PPPoE 凭据: 未内置；刷机后填写账号密码或恢复网络配置"
+              else
+                echo "- PPPoE 凭据: 已内置，账号 ${pppoe_account:0:4}****（密码隐去不显示）"
+              fi
             fi
             echo "- IPv6: ${{ inputs.enable_ipv6 }}"
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
