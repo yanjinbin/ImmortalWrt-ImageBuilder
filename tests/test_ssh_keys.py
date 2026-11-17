@@ -23,10 +23,19 @@ class SshKeysPresetTest(unittest.TestCase):
         self.defaults = SSH_DEFAULTS.read_text(encoding="utf-8")
 
     def test_workflow_reads_the_secret_and_never_echoes_it(self):
-        self.assertIn("SSH_PUBKEY: ${{ secrets.SSH_PUBKEY }}", self.workflow)
+        # Run workflow 表单优先, 仓库 secret 兜底
+        self.assertIn(
+            "SSH_PUBKEY: ${{ github.event.inputs.ssh_pubkey || secrets.SSH_PUBKEY }}",
+            self.workflow,
+        )
         self.assertIn("custom/ssh_authorized_keys", self.workflow)
         # 只允许打印条数, 不允许把公钥内容回显到日志
         self.assertIn("仅统计数量, 不打印公钥内容", self.workflow)
+
+    def test_workflow_exposes_ssh_pubkey_input(self):
+        self.assertIn("      ssh_pubkey:\n", self.workflow)
+        self.assertIn("多把公钥用 | 分隔", self.workflow)
+        self.assertIn("tr '|' '\\n'", self.workflow)
 
     def test_build_installs_keys_for_root_via_dropbear(self):
         for fragment in (

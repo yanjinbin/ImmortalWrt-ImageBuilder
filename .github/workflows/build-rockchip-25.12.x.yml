@@ -181,6 +181,13 @@ on:
         description: "备注说明 (可选, 会写入本次 Release 说明)"
         required: false
         default: ""
+      ssh_pubkey:
+        description: |
+          SSH 公钥 (可选)：粘贴 ssh-ed25519 / ssh-rsa / ecdsa-sha2-* 公钥，
+          刷机后 root 免密登录并在 LuCI「系统→管理权→SSH-Keys」中可见；
+          多把公钥用 | 分隔；留空时回退到仓库 secret SSH_PUBKEY，都没有则不预置
+        required: false
+        default: ""
       nikki_version:
         description: "OpenWrt-nikki 预编译 release: latest 或指定 release tag"
         required: false
@@ -252,19 +259,20 @@ jobs:
       
       - name: Save SSH public keys into OpenWrt files
         env:
-          # 公钥不写进仓库: 在 fork 仓库 Settings -> Secrets and variables -> Actions
-          # 新建 SSH_PUBKEY, 支持多行/多把公钥 (每行一把, 形如 "ssh-ed25519 AAAA... me@mac")
-          SSH_PUBKEY: ${{ secrets.SSH_PUBKEY }}
+          # 优先用 Run workflow 表单里填的 ssh_pubkey；留空时回退到仓库 secret SSH_PUBKEY
+          # (Settings -> Secrets and variables -> Actions)，方便一次填多把/长期复用。
+          # 支持多行，也支持用 | 分隔多把公钥。
+          SSH_PUBKEY: ${{ github.event.inputs.ssh_pubkey || secrets.SSH_PUBKEY }}
         run: |
           mkdir -p "${{ github.workspace }}/custom"
           keyfile="${{ github.workspace }}/custom/ssh_authorized_keys"
           if [ -n "${SSH_PUBKEY//[[:space:]]/}" ]; then
-            printf '%s\n' "$SSH_PUBKEY" > "$keyfile"
+            printf '%s\n' "$SSH_PUBKEY" | tr '|' '\n' > "$keyfile"
             count=$(grep -cve '^[[:space:]]*$' -e '^[[:space:]]*#' "$keyfile" || true)
             echo "已预置 ${count} 条 SSH 公钥 (仅统计数量, 不打印公钥内容)"
           else
             rm -f "$keyfile"
-            echo "⚪️ 未提供 secrets.SSH_PUBKEY, 固件不预置 SSH 公钥"
+            echo "⚪️ 未填写 ssh_pubkey / 未提供 secrets.SSH_PUBKEY, 固件不预置 SSH 公钥"
           fi
           # custom 目录会挂载到固件的 /etc/config, build25.sh 校验格式后写入
           # /etc/dropbear/authorized_keys, 首启再由 98-sshkeys.sh 合并并修正权限
