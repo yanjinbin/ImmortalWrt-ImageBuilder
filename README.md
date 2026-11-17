@@ -45,6 +45,7 @@
 - Footstrap 壁纸保护：官方 feeds 的同名包与 fork 预编译包版本号相同、但只有 fork 包带内置壁纸；而 `PACKAGES="pkg=版本"` 这种锁定方式会被 ImageBuilder 的 `FormatPackages` 泄漏成后续所有包的约束（`package_install` exit 99，实测踩过）。因此构建时用 `shell/repin-footstrap.py` 把 fork 包重打包为 `-r2` 版本（顺带校验包内有 `wallpapers/cats.svg`、`wallpapers/dinos.svg`），并把本地 `packages/` 仓库置顶；构建后再校验固件 manifest 的版本，任一不满足直接失败
 - 默认主机名：ImmortalWrt-<软路由型号>-Gateway（如 E20C → `ImmortalWrt-E20C-Gateway`、NanoPi-R5C → `ImmortalWrt-NanoPi-R5C-Gateway`），首启按板型自动设置
 - 默认登录密码：`666666`（LuCI 系统->管理权 可修改）
+- SSH 公钥预置：在仓库 `Settings → Secrets and variables → Actions` 新建 secret `SSH_PUBKEY`（支持多行、多把公钥），构建时写入固件 root 的 `/etc/dropbear/authorized_keys`，刷机后直接显示在 LuCI「系统 → 管理权 → SSH-Keys」，无需手工粘贴（R5C / E20C 等 rockchip 机型）
 - LuCI 登录时长：默认 365 天（`luci.sauth.cookie_days=365`，rpcd `sessiontime` 固定 604800 不放大；cookie + localStorage 双保险，覆盖通用/OpenWrt/uniwrt/footstrap/bootstrap 主题；密码页"登录时长（天）/ Login duration (days)"支持中英文显示）
 - 默认主题：Vantage（`luci.main.mediaurlbase=/luci-static/vantage`，首启由 `files/etc/uci-defaults/97-luci-theme.sh` 读取 `/etc/luci-default-theme` 写入；工作流 `default_theme` 可选 vantage / 7dollar / aeris / footstrap / bootstrap，主题缺失时按 vantage → footstrap → bootstrap 回退）
 - 壁纸：Footstrap 包含 Cats / Dinos 两套内置壁纸，默认未启用；可在 Appearance → Wallpaper 中选择，并通过 Save as default 保存为路由器默认设置（主题设为 Footstrap 时生效）
@@ -55,6 +56,12 @@
 **默认 LAN 口 IP**：工作流 UI 中 `custom_router_ip` 已改为下拉选择（默认 `192.168.1.1`，可选 `192.168.100.1` 等），仅对多网口机型生效。
 
 **PPPoE 模式**：Rockchip 工作流选择 `enable_pppoe=yes` 时，可以同时留空账号和密码，只预设 PPPoE 模式。刷机后填写拨号信息或恢复网络配置；空白构建凭据不会覆盖已有拨号账号密码。若填写凭据，必须同时填写两项，且会写入公开发布的固件。
+
+**SSH 公钥预置（R5C / E20C 等 rockchip 机型）**：在 fork 仓库的 `Settings → Secrets and variables → Actions` 里新建 secret `SSH_PUBKEY`，内容是 `~/.ssh/id_ed25519.pub` 这类公钥文本（多把公钥按行分隔即可，空行和 `#` 注释会被忽略）。构建时 `rockchip/build25.sh` 会校验公钥类型（`ssh-ed25519` / `ssh-rsa` / `ecdsa-sha2-*` / `sk-*`）后写入固件 root 的 `/etc/dropbear/authorized_keys`，首启再由 `files/etc/uci-defaults/98-sshkeys.sh` 与已有公钥合并去重、把目录/文件权限修正为 `0700`/`0600`。效果：
+- 刷机后 `ssh root@192.168.1.1` 直接免密登录，LuCI「系统 → 管理权 → SSH-Keys」页面能看到预置公钥，也可继续在页面上增删；
+- 密码 `666666` 仍然可用（公钥只是多一种登录方式），如需只允许密钥登录，刷机后在 LuCI 关闭密码认证即可；
+- 本地构建（不走 Actions）时，把公钥写到 `custom/ssh_authorized_keys` 后执行 `make image ...`，效果相同；
+- 公钥本身不是机密，用 secret 注入只是为了避免把个人公钥提交进仓库。
 
 **全平台 IPv6 开关**：所有构建工作流（x86-64、Rockchip、MediaTek 无线路由器、Sunxi 全志、树莓派 Raspberry Pi、QEMU、斐讯 N1、ISO 安装器）UI 中均已支持 `enable_ipv6` 参数：
 - `no`（默认，纯 IPv4 模式）：在固件首次开机时于运行时配置层面彻底关闭 IPv6（将 WAN6 协议置为 `none`、禁用 LAN 口 RA 与 DHCPv6 分配、停止并禁用 `odhcpd` 服务、防火墙开启 `disable_ipv6=1` 屏蔽 IPv6 流量）；**同时固件镜像中完整保留所有 IPv6 相关软件包（不卸载）**，便于用户日后在 LuCI Web 界面按需重新开启。

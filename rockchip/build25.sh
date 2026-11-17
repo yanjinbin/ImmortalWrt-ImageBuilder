@@ -49,6 +49,58 @@ else
     echo "⚪️ 未提供 NIKKI_SUBSCRIPTION_URL, 固件只启用 nikki、不预置订阅"
 fi
 
+# ============= SSH 公钥预置 (root, 对应 LuCI: 系统 -> 管理权 -> SSH-Keys) =============
+# workflow 把 secrets.SSH_PUBKEY 写到 custom/ssh_authorized_keys (custom 目录被挂载到
+# files/etc/config), 这里校验格式后写入固件, 首启再由 98-sshkeys.sh 合并/修权限。
+# 支持多行、多把公钥; 空行和 # 注释会被忽略。
+SSH_KEYS_SRC="/home/build/immortalwrt/files/etc/config/ssh_authorized_keys"
+SSH_DROPBEAR_DIR="/home/build/immortalwrt/files/etc/dropbear"
+SSH_KEYS_BAKED="$SSH_DROPBEAR_DIR/authorized_keys.baked"
+
+if [ -s "$SSH_KEYS_SRC" ]; then
+    mkdir -p "$SSH_DROPBEAR_DIR"
+    : > "$SSH_KEYS_BAKED.tmp"
+    while IFS= read -r ssh_key || [ -n "$ssh_key" ]; do
+        # 去掉 CRLF / 行尾空白, 跳过空行和注释
+        ssh_key=$(printf '%s' "$ssh_key" | tr -d '\r')
+        ssh_key=$(printf '%s' "$ssh_key" | sed 's/[[:space:]]*$//')
+        case "$ssh_key" in
+            ''|\#*) continue ;;
+        esac
+        case "$ssh_key" in
+            ssh-rsa\ *|ssh-ed25519\ *|ssh-dss\ *|ecdsa-sha2-*\ *|\
+            sk-ssh-ed25519@openssh.com\ *|sk-ecdsa-sha2-nistp256@openssh.com\ *)
+                ;;
+            *)
+                echo "错误: SSH 公钥格式无法识别 (应以 ssh-ed25519 / ssh-rsa / ecdsa-sha2- 等开头), 请检查 secrets.SSH_PUBKEY"
+                # 只回显类型字段, 不把公钥正文/注释写进构建日志
+                echo "       收到的行首: $(printf '%s' "$ssh_key" | cut -d' ' -f1)"
+                exit 1
+                ;;
+        esac
+        printf '%s\n' "$ssh_key" >> "$SSH_KEYS_BAKED.tmp"
+    done < "$SSH_KEYS_SRC"
+
+    if [ -s "$SSH_KEYS_BAKED.tmp" ]; then
+        chmod 600 "$SSH_KEYS_BAKED.tmp"
+        mv -f "$SSH_KEYS_BAKED.tmp" "$SSH_KEYS_BAKED"
+        cp -f "$SSH_KEYS_BAKED" "$SSH_DROPBEAR_DIR/authorized_keys"
+        chmod 700 "$SSH_DROPBEAR_DIR"
+        chmod 600 "$SSH_KEYS_BAKED" "$SSH_DROPBEAR_DIR/authorized_keys"
+        echo "✅ 已预置 $(wc -l < "$SSH_KEYS_BAKED" | tr -d ' ') 条 SSH 公钥 (LuCI 系统->管理权->SSH-Keys 可见)"
+    else
+        rm -f "$SSH_KEYS_BAKED.tmp"
+        rm -f "$SSH_KEYS_BAKED"
+        echo "⚪️ SSH 公钥文件为空, 固件不预置公钥"
+    fi
+    # 暂存文件只用于构建期注入, 不留在固件的 /etc/config 里
+    rm -f "$SSH_KEYS_SRC"
+else
+    # 清掉上一次本地构建可能残留的 baked 文件, 避免它被带进本次固件
+    rm -f "$SSH_KEYS_BAKED"
+    echo "⚪️ 未提供 SSH_PUBKEY, 固件不预置 SSH 公钥"
+fi
+
 echo "Create pppoe-settings"
 mkdir -p  /home/build/immortalwrt/files/etc/config
 

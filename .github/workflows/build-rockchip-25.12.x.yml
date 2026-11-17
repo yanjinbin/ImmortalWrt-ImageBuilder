@@ -250,6 +250,25 @@ jobs:
           echo "您设置的Rockchip软路由管理地址是:${{ github.event.inputs.custom_router_ip }}"
           # 后续步骤会将该文件映射到路由器/etc/config/custom_router_ip.txt 以便用于开机脚本99-custom.sh读取用户设置的ip
       
+      - name: Save SSH public keys into OpenWrt files
+        env:
+          # 公钥不写进仓库: 在 fork 仓库 Settings -> Secrets and variables -> Actions
+          # 新建 SSH_PUBKEY, 支持多行/多把公钥 (每行一把, 形如 "ssh-ed25519 AAAA... me@mac")
+          SSH_PUBKEY: ${{ secrets.SSH_PUBKEY }}
+        run: |
+          mkdir -p "${{ github.workspace }}/custom"
+          keyfile="${{ github.workspace }}/custom/ssh_authorized_keys"
+          if [ -n "${SSH_PUBKEY//[[:space:]]/}" ]; then
+            printf '%s\n' "$SSH_PUBKEY" > "$keyfile"
+            count=$(grep -cve '^[[:space:]]*$' -e '^[[:space:]]*#' "$keyfile" || true)
+            echo "已预置 ${count} 条 SSH 公钥 (仅统计数量, 不打印公钥内容)"
+          else
+            rm -f "$keyfile"
+            echo "⚪️ 未提供 secrets.SSH_PUBKEY, 固件不预置 SSH 公钥"
+          fi
+          # custom 目录会挂载到固件的 /etc/config, build25.sh 校验格式后写入
+          # /etc/dropbear/authorized_keys, 首启再由 98-sshkeys.sh 合并并修正权限
+
       - name: Validate PPPoE Inputs
         run: |
           enable_pppoe=$(jq -r '.inputs.enable_pppoe // ""' "$GITHUB_EVENT_PATH")
@@ -554,6 +573,13 @@ jobs:
             grep -qx 'pppoe_account=' custom/pppoe-settings
             grep -qx 'pppoe_password=' custom/pppoe-settings
           fi
+          if [[ -s files/etc/dropbear/authorized_keys.baked ]]; then
+            # 只校验"有合法公钥写入", 不回显内容
+            grep -qE '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-)' files/etc/dropbear/authorized_keys.baked
+            echo "已确认固件预置 SSH 公钥: $(wc -l < files/etc/dropbear/authorized_keys.baked | tr -d ' ') 条"
+          else
+            echo "本次构建未预置 SSH 公钥"
+          fi
           echo "已确认固件包含 Nikki、Bandix Plus，PPPoE 预设与输入一致。"
 
       - name: 生成动态 Release 说明
@@ -605,6 +631,11 @@ jobs:
               else
                 echo "- PPPoE 凭据: 已内置，账号 ${pppoe_account:0:4}****（密码隐去不显示）"
               fi
+            fi
+            if [[ -s files/etc/dropbear/authorized_keys.baked ]]; then
+              echo "- SSH 公钥: 已预置 $(wc -l < files/etc/dropbear/authorized_keys.baked | tr -d ' ') 条 (root 用户，LuCI 系统→管理权→SSH-Keys 可见)"
+            else
+              echo "- SSH 公钥: 未预置 (仍可用密码 666666 登录)"
             fi
             echo "- IPv6: ${{ inputs.enable_ipv6 }}"
             echo "- mihomo: v$MIHOMO_VER ($MIHOMO_PLAT)"
