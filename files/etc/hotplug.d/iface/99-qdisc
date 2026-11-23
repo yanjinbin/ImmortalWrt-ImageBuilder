@@ -1,0 +1,9 @@
+#!/bin/sh
+# PPPoE 上线后给 WAN 挂 fq_codel: 抗 bufferbloat, 延迟/抖动优先于峰值吞吐。
+# 重拨会重建 pppoe-wan, 因此每次 ifup 都要重挂; 失败静默(回落到默认 pfifo_fast)。
+[ "$ACTION" = "ifup" ] || exit 0
+[ "$INTERFACE" = "wan" ] || exit 0
+
+sleep 2
+tc qdisc replace dev pppoe-wan root fq_codel 2>/dev/null
+exit 0

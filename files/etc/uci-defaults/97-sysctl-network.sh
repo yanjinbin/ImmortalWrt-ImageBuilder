@@ -41,8 +41,28 @@ net.core.netdev_max_backlog=16384
 net.core.rps_sock_flow_entries=32768
 # BBR 拥塞控制 (fq_codel qdisc 兼容; fq 未内建于该内核)
 net.ipv4.tcp_congestion_control=bbr
+# 稳定性: 不带 loopback 的 TIME_WAIT 复用; TFO 仅客户端 (路由器不做服务端)
+net.ipv4.tcp_tw_reuse=1
+net.ipv4.tcp_fastopen=1
+# 高并发 NAT + 代理连接表 (4GB 设备余量充足, 现场活跃连接 < 100)
+net.netfilter.nf_conntrack_max=131072
+net.netfilter.nf_conntrack_tcp_timeout_established=7200
+net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
+net.netfilter.nf_conntrack_udp_timeout=30
+net.netfilter.nf_conntrack_udp_timeout_stream=120
+# 无 swap 设备
+vm.swappiness=10
 # <<< network baseline <<<
 EOF
+
+# 旧镜像把 conntrack / BBR 拆在 /etc/sysctl.d 里, 与上面的标记块形成两份来源,
+# 改一处不生效; 统一收敛到标记块后删除这些文件 (幂等)
+for legacy in /etc/sysctl.d/11-nf-conntrack.conf /etc/sysctl.d/12-tcp-bbr.conf; do
+	if [ -f "$legacy" ]; then
+		rm -f "$legacy"
+		echo "Removed legacy $(basename "$legacy")" >>"$LOGFILE"
+	fi
+done
 
 # BBR: 加载 kmod-tcp-bbr 并固化开机加载 (模块由构建时 PACKAGES 引入)
 if modprobe tcp_bbr 2>/dev/null; then

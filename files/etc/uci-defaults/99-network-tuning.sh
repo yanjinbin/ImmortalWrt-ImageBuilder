@@ -10,11 +10,14 @@
 #    仅供路由器自身连接 IPv6 节点。
 # 2) Nikki 只代理 IPv4（ipv6_proxy=0）；IPv6 DNS 仍然要劫持（ipv6_dns_hijack=1），
 #    否则终端的 IPv6 DNS 查询会绕过内核直连 ISP，被投毒后表现为"网站时好时坏"。
-# 3) 防火墙：软件 flow offloading 开启（被 TPROXY 命中的流量走本地协议栈，
-#    不进 forward，不受卸载影响），硬件 offloading 保持关闭（会绕过 netfilter）。
+# 3) 防火墙：软件与硬件 flow offloading 全部关闭。TPROXY 在 prerouting 就把流量交给
+#    本地协议栈，而 flowtable 卸载走的是 forward 快速路径；两者在 UDP/QUIC + fullcone
+#    组合下存在边界（历史事故表现为代理时通时断）。稳定优先，转发吞吐由 fq_codel +
+#    packet_steering 多核分流补偿。确实需要峰值吞吐时可临时：
+#      uci set firewall.@defaults[0].flow_offloading=1 && uci commit firewall && fw4 reload
 #    另加一条 lan→wan 的 IPv6 REJECT，兜住终端里残留的旧 v6 地址。
-# 4) dnsmasq：dns_redirect=0（与 nikki 的 dport 53 -> :1053 劫持重复）。
-#    LAN 的 DNS 全部被 nikki 劫持到 mihomo，dnsmasq 的缓存参数对终端无影响，不再调整。
+# 4) dnsmasq：dns_redirect=0（与 nikki 的 dport 53 -> :1053 劫持重复）；
+#    min_cache_ttl=300，避免 CDN IP 被旧缓存锁死一小时。
 # 5) nikki fast_reload=0 + clear_connections_on_reload=1，重载时断开僵尸连接。
 # 6) 清理历史遗留：老固件写过的 GEOSITE,wechat / GEOSITE,tencent 自定义规则会让
 #    配置校验直接失败（MetaCubeX 的 geosite.dat 没有这两个分类，内核起不来），
@@ -29,9 +32,9 @@ uci -q get nikki >/dev/null 2>&1 || {
 	exit 0
 }
 
-# --- 1) 防火墙：软件 offloading 开、硬件关 ---
+# --- 1) 防火墙：软件/硬件 offloading 全关（稳定优先，见头注释 3）---
 if uci -q get "firewall.@defaults[0]" >/dev/null 2>&1; then
-	uci set firewall.@defaults[0].flow_offloading='1'
+	uci set firewall.@defaults[0].flow_offloading='0'
 	uci set firewall.@defaults[0].flow_offloading_hw='0'
 fi
 
@@ -49,12 +52,20 @@ fi
 # --- 3) dnsmasq：去掉重复劫持 ---
 for section in $(uci -q show dhcp | sed -n 's/^dhcp\.\([^.=]*\)=dnsmasq$/\1/p'); do
 	uci set "dhcp.${section}.dns_redirect=0"
+	# 缓存过久会把 CDN IP 锁死, 300s 足够吸收突发又能跟随调度
+	uci set "dhcp.${section}.min_cache_ttl=300"
 done
 
 # --- 4) nikki 重载行为 ---
 if uci -q get "nikki.procd" >/dev/null 2>&1; then
 	uci set nikki.procd.fast_reload='0'
 	uci set nikki.procd.clear_connections_on_reload='1'
+fi
+
+# nikki 日志清理: 半小时一次, 5MB 阈值, 减少无谓 IO
+if uci -q get "nikki.log" >/dev/null 2>&1; then
+	uci set nikki.log.scheduled_clear_cron='*/30 * * * *'
+	uci set nikki.log.scheduled_clear_size_limit='5'
 fi
 
 # --- 5) LAN 纯 IPv4 ---
@@ -103,6 +114,6 @@ uci commit nikki 2>/dev/null
 
 [ -x /sbin/fw4 ] && fw4 reload >/dev/null 2>&1
 
-echo "Applied system network baseline: flow_offloading=1/hw=0, lan_pure_ipv4, reject_lan_ipv6, ipv6_proxy=0, ipv6_dns_hijack=1, dns_redirect=0, fast_reload=0" >>"$LOGFILE"
+echo "Applied system network baseline: flow_offloading=0/hw=0, lan_pure_ipv4, reject_lan_ipv6, ipv6_proxy=0, ipv6_dns_hijack=1, dns_redirect=0, min_cache_ttl=300, fast_reload=0" >>"$LOGFILE"
 
 exit 0

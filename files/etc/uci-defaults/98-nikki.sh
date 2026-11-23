@@ -1,34 +1,30 @@
 #!/bin/sh
-# 预置 nikki: 订阅地址来自构建时写入的 /etc/nikki-subscription-url（工作流的
-# secrets.NIKKI_SUBSCRIPTION_URL），并默认开机启用。
-# 没带地址时只启用服务、不动订阅，避免把订阅写进公开仓库。
+# 预置 nikki: 只负责「开机启用 + 启动延迟」。
+#
+# 订阅地址不进镜像、不走 secret:
+#   - 重刷后订阅由运维侧脚本写入 (r5c-optimized/deploy.sh 或 LuCI),
+#     这样镜像里不会留下任何令牌, 也不会因为换了订阅还要重新构建。
+#   - 若镜像里已经存在订阅段 (例如由 sysupgrade 保留的 /etc/config/nikki),
+#     首启时把 profile 指向第一个订阅, 避免「服务起来了但没选中配置」。
 LOGFILE="/etc/config/uci-defaults-log.txt"
 
 uci -q get nikki >/dev/null 2>&1 || exit 0
 
-SUB_URL_FILE="/etc/nikki-subscription-url"
-if [ -f "$SUB_URL_FILE" ]; then
-	SUB_URL="$(cat "$SUB_URL_FILE" 2>/dev/null)"
-	# 令牌只在 uci 里留一份，避免在 /etc 下多一份明文副本
-	rm -f "$SUB_URL_FILE"
-
-	if [ -n "$SUB_URL" ]; then
-		uci set nikki.subscription=subscription 2>/dev/null || true
-		uci set nikki.subscription.name='oralcure'
-		uci set nikki.subscription.url="$SUB_URL"
-		uci set nikki.subscription.user_agent='clash'
-		uci set nikki.subscription.prefer='remote'
-		uci set nikki.subscription.auto_update='1'
-		echo "已预置 nikki 订阅地址" >>"$LOGFILE"
-	fi
-fi
-
 uci set nikki.config.enabled='1'
 # 首启留给 PPPoE 拨号的时间, 避免订阅拉取失败导致服务没起来 (失败了也不影响直连)
 uci set nikki.config.start_delay='30'
+
+if [ -z "$(uci -q get nikki.config.profile)" ]; then
+	first=$(uci -q show nikki | sed -n 's/^nikki\.\([^.=]*\)=subscription$/\1/p' | head -1)
+	if [ -n "$first" ]; then
+		uci set nikki.config.profile="subscription:$first"
+		echo "nikki profile -> subscription:$first" >>"$LOGFILE"
+	fi
+fi
+
 uci commit nikki
 /etc/init.d/nikki enable >/dev/null 2>&1
 
-echo "nikki 已设为开机启用" >>"$LOGFILE"
+echo "nikki 已设为开机启用 (订阅需刷机后配置)" >>"$LOGFILE"
 
 exit 0
