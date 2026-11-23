@@ -22,7 +22,7 @@
 | 文件 | 作用 |
 |---|---|
 | `97-sysctl-network.sh` | sysctl 标记块：收发缓冲 32 MB、`tcp_mtu_probing`、`slow_start_after_idle=0`、backlog/RFS、BBR、`tcp_tw_reuse=1`、`tcp_fastopen=1`、`nf_conntrack_max=131072` + 超时、`vm.swappiness=10`；并删除旧镜像遗留的 `/etc/sysctl.d/11-nf-conntrack.conf`、`12-tcp-bbr.conf`，保证只有一个来源 |
-| `98-nikki.sh` | 开机启用 nikki + `start_delay=30`；若有订阅段则选中第一个 profile；**不写任何订阅地址** |
+| `98-nikki.sh` | 开机启用 nikki + `start_delay=30`；把构建期注入的 `NIKKI_SUBSCRIPTION_URL` 建成 `oralcure` 订阅段并选中 profile（读完即删临时文件，令牌只留 uci）；无注入时只启用服务 |
 | `99-network-tuning.sh` | `flow_offloading=0` / `_hw=0`；LAN 纯 IPv4（`delegate=0`、删 `ip6assign`、`ra/dhcpv6/ndp=disabled`）；`Reject-LAN-IPv6-egress`；`dns_redirect=0`、`min_cache_ttl=300`；`ipv6_proxy=0` + `ipv6_dns_hijack=1`；`fast_reload=0`、`clear_connections_on_reload=1`；nikki 日志清理 `*/30`、5 MB |
 | `files/etc/hotplug.d/iface/99-qdisc` | PPPoE `ifup` 后给 `pppoe-wan` 挂 `fq_codel`（重拨自动重挂） |
 
@@ -54,11 +54,12 @@
 ## 5. 刷机后要做的事
 
 1. 配好 PPPoE（构建时已有开关，账号密码由 workflow 输入）。
-2. 写入订阅（二选一）：
-   - 运维脚本 `~/.ssh/r5c-optimized/deploy.sh`（推荐，含校验与回滚）；
-   - LuCI → 服务 → Nikki → 订阅，粘两条 URL：
+2. 订阅：
+   - 构建时设置了 `secrets.NIKKI_SUBSCRIPTION_URL` → 首启自动建好一条 `oralcure` 订阅并选中，直接用；
+   - 未设置 → 运维脚本 `~/.ssh/r5c-optimized/deploy.sh`（推荐，含校验与回滚），或 LuCI 手工加：
      - ✈️ 带机场：`…?device=nikki&dns=doh&ipv6=true`
      - 🏠 只含自建：`…?device=nikki&dns=doh&ipv6=true&profile=simple`
+   - secret 的值必须是**完整订阅 URL**（含上面那些参数），否则下发的配置会退回默认的桌面/unified 形态。
 3. 验证（全部应通过）：
 
 ```sh
