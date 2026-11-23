@@ -560,6 +560,7 @@ jobs:
               -e PPPOE_PASSWORD="$pppoe_password" \
               -e ENABLE_IPV6="${{ inputs.enable_ipv6 }}" \
               -e DEFAULT_THEME="${{ inputs.default_theme }}" \
+              -e NIKKI_SUBSCRIPTION_URL="${{ secrets.NIKKI_SUBSCRIPTION_URL }}" \
           immortalwrt/imagebuilder:rockchip-armv8-openwrt-${luci_version} /bin/bash /home/build/immortalwrt/build.sh
         
     
