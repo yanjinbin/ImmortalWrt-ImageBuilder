@@ -39,15 +39,9 @@ esac
 printf '%s\n' "$DEFAULT_THEME" > /home/build/immortalwrt/files/etc/luci-default-theme
 echo "默认主题预置为 ${DEFAULT_THEME}"
 
-# nikki 订阅预置: 地址来自 workflow 的 secrets.NIKKI_SUBSCRIPTION_URL (不写入仓库),
-# 首启由 files/etc/uci-defaults/98-nikki.sh 读入 uci 并设置开机启用。
-if [ -n "${NIKKI_SUBSCRIPTION_URL:-}" ]; then
-    printf '%s\n' "$NIKKI_SUBSCRIPTION_URL" > /home/build/immortalwrt/files/etc/nikki-subscription-url
-    chmod 600 /home/build/immortalwrt/files/etc/nikki-subscription-url
-    echo "已预置 nikki 订阅地址 (${#NIKKI_SUBSCRIPTION_URL} 字符)"
-else
-    echo "⚪️ 未提供 NIKKI_SUBSCRIPTION_URL, 固件只启用 nikki、不预置订阅"
-fi
+# nikki 订阅不进镜像: 令牌不落在固件里, 重刷/换订阅都不需要重新构建。
+# 刷机后由运维脚本写入订阅并选择 profile (见 docs/rockchip-network-baseline.md)。
+echo "nikki: 订阅地址不在构建期写入, 刷机后配置"
 
 # ============= SSH 公钥预置 (root, 对应 LuCI: 系统 -> 管理权 -> SSH-Keys) =============
 # workflow 把 secrets.SSH_PUBKEY 写到 custom/ssh_authorized_keys (custom 目录被挂载到
